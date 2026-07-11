@@ -21,8 +21,6 @@ import {
   Linkedin,
   FileDown,
   ExternalLink,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -64,60 +62,6 @@ const SKILLS: { name: string; Icon: React.ComponentType<{ size?: number; classNa
 function Index() {
   const [page, setPage] = useState<PageId>("cover");
   const [dir, setDir] = useState<1 | -1>(1);
-  const [muted, setMuted] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
-  const playPageTurn = () => {
-    if (muted) return;
-    if (typeof window === "undefined") return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    try {
-      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) return;
-      let ctx = audioCtxRef.current;
-      if (!ctx) {
-        ctx = new Ctx();
-        audioCtxRef.current = ctx;
-      }
-      if (ctx.state === "suspended") ctx.resume();
-      const now = ctx.currentTime;
-      const dur = 0.32;
-
-      // white noise buffer for the paper "shhh"
-      const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        // fade in then out, slight envelope
-        const t = i / data.length;
-        const env = Math.sin(Math.PI * t) ** 1.6;
-        data[i] = (Math.random() * 2 - 1) * env;
-      }
-      const noise = ctx.createBufferSource();
-      noise.buffer = buf;
-
-      // bandpass to shape it like paper, not TV static
-      const bp = ctx.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.setValueAtTime(1800, now);
-      bp.frequency.exponentialRampToValueAtTime(600, now + dur);
-      bp.Q.value = 0.9;
-
-      const hp = ctx.createBiquadFilter();
-      hp.type = "highpass";
-      hp.frequency.value = 400;
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-
-      noise.connect(bp).connect(hp).connect(gain).connect(ctx.destination);
-      noise.start(now);
-      noise.stop(now + dur);
-    } catch {
-      /* audio not available — silent fail */
-    }
-  };
 
   const go = (id: PageId) => {
     const from = CHAPTERS.findIndex((c) => c.id === page);
@@ -125,7 +69,6 @@ function Index() {
     if (id === page) return;
     setDir(to >= from ? 1 : -1);
     setPage(id);
-    playPageTurn();
   };
 
   const idx = CHAPTERS.findIndex((c) => c.id === page);
@@ -167,18 +110,9 @@ function Index() {
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setMuted((m) => !m)}
-            aria-label={muted ? "Unmute page-turn sound" : "Mute page-turn sound"}
-            aria-pressed={muted}
-            className="ml-4 rounded-full p-2 transition-opacity hover:opacity-70"
-            style={{ color: "var(--color-ink)", border: "1px dashed var(--color-edge)" }}
-            title={muted ? "Sound off" : "Sound on"}
-          >
-            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-          </button>
         </div>
       </nav>
+
 
 
       {/* page stage */}
@@ -204,20 +138,23 @@ function Index() {
         </AnimatePresence>
 
         {/* prev / next */}
-        {page !== "cover" && (
-          <div className="mx-auto mt-6 flex max-w-3xl items-center justify-between px-2 font-[family-name:var(--font-hand)] text-lg" style={{ color: "var(--color-accent)" }}>
-            {prev ? (
-              <button onClick={() => go(prev.id)} className="inline-flex items-center gap-2 hover:opacity-70">
-                <ArrowLeft size={18} /> {prev.label}
-              </button>
-            ) : <span />}
-            {next ? (
-              <button onClick={() => go(next.id)} className="inline-flex items-center gap-2 hover:opacity-70">
-                {next.label} <ArrowRight size={18} />
-              </button>
-            ) : <span />}
-          </div>
-        )}
+        <div className="mx-auto mt-8 flex max-w-3xl items-center justify-between gap-4 px-2 font-[family-name:var(--font-hand)] text-lg" style={{ color: "var(--color-accent)" }}>
+          {prev ? (
+            <button onClick={() => go(prev.id)} className="inline-flex items-center gap-2 rounded-sm px-3 py-1.5 hover:opacity-70" style={{ border: "1px dashed var(--color-accent)" }}>
+              <ArrowLeft size={18} /> {prev.label}
+            </button>
+          ) : <span />}
+          {next ? (
+            <button
+              onClick={() => go(next.id)}
+              className="inline-flex items-center gap-2 rounded-sm border-2 px-4 py-1.5 font-bold shadow-[3px_3px_0_0_var(--color-accent)] transition-transform hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_var(--color-accent)]"
+              style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", backgroundColor: "var(--color-paper)" }}
+            >
+              Next → {next.label} <ArrowRight size={18} />
+            </button>
+          ) : <span />}
+        </div>
+
       </div>
     </main>
     </MotionConfig>
