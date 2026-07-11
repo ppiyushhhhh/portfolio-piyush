@@ -36,9 +36,12 @@ function Index() {
         <section className="mb-10">
           <h2 className="mb-3 text-xl font-semibold">Experience</h2>
 
-          <div className="mb-5">
+          <div className="mb-5 flex gap-4">
+            <img src={runtimeLogo.url} alt="Runtime Solutions logo" className="h-12 w-12 flex-shrink-0 object-contain" />
+            <div className="flex-1">
             <h3 className="font-semibold">IT Office Assistant — Runtime Solutions</h3>
             <p className="text-sm text-gray-700">Dec 2024 – Present</p>
+
             <ul className="mt-2 list-disc space-y-1 pl-5">
               <li>Managed end-to-end ITSM ticket lifecycle including incidents, service requests, and escalations across multiple locations using ManageEngine ServiceDesk Plus.</li>
               <li>Maintained SLA compliance by prioritizing critical issues, minimizing downtime, and ensuring timely resolution.</li>
