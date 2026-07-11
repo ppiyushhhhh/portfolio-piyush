@@ -254,13 +254,13 @@ function CoverPage({ go }: { go: (id: PageId) => void }) {
                   onClick={() => go(c.id)}
                   aria-label={`Go to chapter ${c.num}, ${c.label}, page ${pageLabel}`}
                   className="group flex w-full items-baseline gap-3 rounded-sm px-1 py-0.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                  style={{
-                    color: "var(--color-ink)",
-                    // @ts-expect-error - custom css vars for ring color
-                    "--tw-ring-color": "var(--color-accent)",
-                    // @ts-expect-error
-                    "--tw-ring-offset-color": "var(--color-paper)",
-                  }}
+                  style={
+                    {
+                      color: "var(--color-ink)",
+                      "--tw-ring-color": "var(--color-accent)",
+                      "--tw-ring-offset-color": "var(--color-paper)",
+                    } as React.CSSProperties
+                  }
                 >
                   <span aria-hidden="true" style={{ color: "var(--color-accent)" }}>{c.num}</span>
                   <span className="group-hover:marker-hi transition-all">{c.label}</span>
