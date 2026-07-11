@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
 /* ---------------- Data ---------------- */
 
 const CHAPTERS = [
-  { id: "cover", label: "Cover" },
+  { id: "cover", label: "Cover", num: "" },
   { id: "about", label: "About", num: "01" },
   { id: "skills", label: "Skills", num: "02" },
   { id: "projects", label: "Projects", num: "03" },
