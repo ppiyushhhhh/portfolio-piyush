@@ -6,8 +6,9 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="min-h-screen bg-white text-gray-900">
-      <div className="mx-auto max-w-2xl px-6 py-12 leading-relaxed">
+    <main className="min-h-screen bg-gray-100 text-gray-900">
+      <div className="mx-auto my-8 max-w-2xl border border-gray-300 bg-white px-8 py-12 leading-relaxed sm:px-12 sm:my-12">
+
         <header className="mb-10">
           <h1 className="text-3xl font-semibold">Piyush Prasad</h1>
           <p className="mt-1 text-lg text-gray-700">Aspiring Cloud & DevOps Engineer</p>
