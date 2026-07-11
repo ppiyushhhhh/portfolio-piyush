@@ -114,7 +114,7 @@ function Index() {
           />
           <Project
             title="Production-Ready Deployment on AWS EC2 with Monitoring & Security"
-            period="Feb 2026 – April 2026 · Live Project"
+            period="In Progress · Live Project"
             bullets={[
               "Deployed a production-grade React and Node.js application on AWS EC2 with Nginx reverse proxy and HTTPS enabled via Certbot SSL.",
               "Hardened the server with UFW Firewall, Basic Authentication, Nginx return 444, rate limiting, and DDoS protection.",
