@@ -16,7 +16,7 @@ function Index() {
           <h1 className="text-3xl font-semibold">Piyush Prasad</h1>
           <p className="mt-1 text-lg text-gray-700">Aspiring Cloud & DevOps Engineer</p>
           <p className="mt-3 text-sm text-gray-700">
-            <a href="mailto:piyushprasad8122@gmail.com" className="underline">piyushprasad8122@gmail.com</a>
+            <a href="mailto:piyush.piyushprasad.in" className="underline">piyush.piyushprasad.in</a>
             {" · "}
             <a href="tel:+919324236673" className="underline">9324236673</a>
             {" · "}
