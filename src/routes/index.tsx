@@ -150,6 +150,7 @@ function Index() {
         )}
       </div>
     </main>
+    </MotionConfig>
   );
 }
 
