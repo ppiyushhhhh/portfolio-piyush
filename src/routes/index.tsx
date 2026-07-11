@@ -666,14 +666,14 @@ function TimelineEntry({ item, index }: { item: (typeof TIMELINE)[number]; index
       <div
         className="absolute -left-[30px] top-2 flex h-5 w-5 items-center justify-center rounded-full"
         style={{
-          backgroundColor: item.future ? "var(--color-paper)" : "var(--color-accent)",
+          backgroundColor: "var(--color-accent)",
           border: "2px solid var(--color-accent)",
         }}
       />
       <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-widest" style={{ color: "var(--color-accent)" }}>
         {item.year}
       </p>
-      <h3 className="mt-0.5 font-[family-name:var(--font-hand)] text-2xl font-bold" style={{ color: "var(--color-ink)", opacity: item.future ? 0.7 : 1 }}>
+      <h3 className="mt-0.5 font-[family-name:var(--font-hand)] text-2xl font-bold" style={{ color: "var(--color-ink)" }}>
         {item.title} <span className="font-normal italic" style={{ color: "var(--color-accent)" }}>· {item.org}</span>
       </h3>
       <p className="text-xs" style={{ color: "var(--color-ink)", opacity: 0.6 }}>{item.period}</p>
