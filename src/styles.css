@@ -19,12 +19,18 @@
  */
 
 @theme {
-  --font-serif: "Libre Baskerville", Georgia, serif;
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
-  --color-navy-950: #0f1b3d;
-  --color-navy-800: #1e3a5f;
-  --color-navy-500: #3b6fa0;
-  --color-navy-50: #e8edf3;
+  --font-hand: "Caveat", "Patrick Hand", cursive;
+  --font-hand-alt: "Patrick Hand", "Caveat", cursive;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-nav: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-paper: #FBF8F2;
+  --color-desk: #F7F2E8;
+  --color-ink: #2B2B2B;
+  --color-rule: #BFD7F5;
+  --color-margin-line: #D97B7B;
+  --color-accent: #4A6FA5;
+  --color-edge: #D8D1C7;
 }
 
 @theme inline {
@@ -147,8 +153,35 @@
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--color-desk);
+    color: var(--color-ink);
     font-family: var(--font-sans);
   }
 }
+
+/* Notebook paper: horizontal rules + red left margin + subtle grain */
+@utility paper {
+  background-color: var(--color-paper);
+  background-image:
+    linear-gradient(to right, transparent 0, transparent calc(3.5rem - 1px), var(--color-margin-line) calc(3.5rem - 1px), var(--color-margin-line) 3.5rem, transparent 3.5rem),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--color-rule) 31px, var(--color-rule) 32px);
+  background-attachment: local;
+}
+
+@utility paper-mobile {
+  background-image:
+    linear-gradient(to right, transparent 0, transparent calc(1.75rem - 1px), var(--color-margin-line) calc(1.75rem - 1px), var(--color-margin-line) 1.75rem, transparent 1.75rem),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, var(--color-rule) 27px, var(--color-rule) 28px);
+}
+
+@utility ink-underline {
+  background-image: linear-gradient(to right, var(--color-ink) 0, var(--color-ink) 100%);
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+}
+
+@utility marker-hi {
+  background-image: linear-gradient(180deg, transparent 55%, #fff3a3 55%, #fff3a3 92%, transparent 92%);
+}
+
