@@ -86,8 +86,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Piyush Prasad — Aspiring Cloud & DevOps Engineer" },
       { name: "twitter:description", content: "Portfolio of Piyush Prasad, aspiring Cloud & DevOps engineer with experience in AWS, CI/CD, Nginx, and DevSecOps." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/2a41c5a1-d0fe-48fe-ad31-ea84e71e7e1b" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/2a41c5a1-d0fe-48fe-ad31-ea84e71e7e1b" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/f0a9b913-3c77-4799-8179-f8a01e6b2d86" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/f0a9b913-3c77-4799-8179-f8a01e6b2d86" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
