@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Mail, Phone, Linkedin, Github } from "lucide-react";
-import runtimeLogo from "@/assets/runtime-solutions.png.asset.json";
-import credenceLogo from "@/assets/credence-infotech.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -78,7 +76,6 @@ function Index() {
           <Role
             title="IT Office Assistant"
             company="Runtime Solutions"
-            logo={runtimeLogo.url}
             period="Dec 2024 – Present"
             bullets={[
               "Managed end-to-end ITSM ticket lifecycle including incidents, service requests, and escalations across multiple locations using ManageEngine ServiceDesk Plus.",
@@ -91,7 +88,6 @@ function Index() {
           <Role
             title="IT Service Management Consultant"
             company="Credence Infotech"
-            logo={credenceLogo.url}
             period="Feb 2022 – Oct 2024"
             bullets={[
               "Delivered ITSM operations aligned with ITIL best practices.",
