@@ -153,8 +153,35 @@
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--color-desk);
+    color: var(--color-ink);
     font-family: var(--font-sans);
   }
 }
+
+/* Notebook paper: horizontal rules + red left margin + subtle grain */
+@utility paper {
+  background-color: var(--color-paper);
+  background-image:
+    linear-gradient(to right, transparent 0, transparent calc(3.5rem - 1px), var(--color-margin-line) calc(3.5rem - 1px), var(--color-margin-line) 3.5rem, transparent 3.5rem),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--color-rule) 31px, var(--color-rule) 32px);
+  background-attachment: local;
+}
+
+@utility paper-mobile {
+  background-image:
+    linear-gradient(to right, transparent 0, transparent calc(1.75rem - 1px), var(--color-margin-line) calc(1.75rem - 1px), var(--color-margin-line) 1.75rem, transparent 1.75rem),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, var(--color-rule) 27px, var(--color-rule) 28px);
+}
+
+@utility ink-underline {
+  background-image: linear-gradient(to right, var(--color-ink) 0, var(--color-ink) 100%);
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+}
+
+@utility marker-hi {
+  background-image: linear-gradient(180deg, transparent 55%, #fff3a3 55%, #fff3a3 92%, transparent 92%);
+}
+
