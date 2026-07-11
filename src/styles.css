@@ -19,12 +19,18 @@
  */
 
 @theme {
-  --font-serif: "Libre Baskerville", Georgia, serif;
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
-  --color-navy-950: #0f1b3d;
-  --color-navy-800: #1e3a5f;
-  --color-navy-500: #3b6fa0;
-  --color-navy-50: #e8edf3;
+  --font-hand: "Caveat", "Patrick Hand", cursive;
+  --font-hand-alt: "Patrick Hand", "Caveat", cursive;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-nav: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-paper: #FBF8F2;
+  --color-desk: #F7F2E8;
+  --color-ink: #2B2B2B;
+  --color-rule: #BFD7F5;
+  --color-margin-line: #D97B7B;
+  --color-accent: #4A6FA5;
+  --color-edge: #D8D1C7;
 }
 
 @theme inline {
