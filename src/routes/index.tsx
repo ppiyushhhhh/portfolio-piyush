@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Mail, Phone, Linkedin, Github } from "lucide-react";
 import runtimeLogo from "@/assets/runtime-solutions.png.asset.json";
 import credenceLogo from "@/assets/credence-infotech.jpg.asset.json";
 
@@ -15,14 +16,19 @@ function Index() {
         <header className="mb-8 pb-8 border-b border-gray-200">
           <h1 className="text-3xl font-semibold">Piyush Prasad</h1>
           <p className="mt-1 text-lg text-gray-700">Aspiring Cloud & DevOps Engineer</p>
-          <p className="mt-3 text-sm text-gray-700">
-            <a href="mailto:piyush.piyushprasad.in" className="underline">piyush.piyushprasad.in</a>
-            {" · "}
-            <a href="tel:+919324236673" className="underline">9324236673</a>
-            {" · "}
-            <a href="https://linkedin.com/in/ppiyushhhh" target="_blank" rel="noreferrer" className="underline">linkedin.com/in/ppiyushhhh</a>
-            {" · "}
-            <a href="https://github.com/ppiyushhhhh" target="_blank" rel="noreferrer" className="underline">github.com/ppiyushhhhh</a>
+          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-700">
+            <a href="mailto:piyush.piyushprasad.in" className="inline-flex items-center gap-1.5 underline">
+              <Mail size={14} aria-hidden="true" />piyush.piyushprasad.in
+            </a>
+            <a href="tel:+919324236673" className="inline-flex items-center gap-1.5 underline">
+              <Phone size={14} aria-hidden="true" />9324236673
+            </a>
+            <a href="https://linkedin.com/in/ppiyushhhh" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 underline">
+              <Linkedin size={14} aria-hidden="true" />linkedin.com/in/ppiyushhhh
+            </a>
+            <a href="https://github.com/ppiyushhhhh" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 underline">
+              <Github size={14} aria-hidden="true" />github.com/ppiyushhhhh
+            </a>
           </p>
         </header>
 
