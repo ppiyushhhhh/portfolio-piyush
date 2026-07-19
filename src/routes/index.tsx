@@ -391,7 +391,7 @@ function Projects() {
             >
               <div className="mono text-cobalt text-[12px] transition-transform duration-500 group-hover:translate-x-2 lg:col-span-1">{p.idx}</div>
               <div className="lg:col-span-6">
-                <h3 className="display text-[40px] leading-[0.9] transition-all duration-500 group-hover:translate-x-2 group-hover:text-cobalt md:text-[64px] lg:text-[80px]">
+                <h3 className="display text-[32px] leading-[0.9] transition-all duration-500 group-hover:translate-x-2 group-hover:text-cobalt sm:text-[40px] md:text-[64px] lg:text-[80px]">
                   {p.title}
                 </h3>
                 <p className="mono mt-4 text-cobalt text-[11px]">{p.subtitle}</p>
