@@ -617,21 +617,66 @@ type Repo = {
 };
 type Commit = { sha: string; commit: { message: string; author: { date: string } } };
 
+const CACHE_VERSION = "v1";
+const REPOS_TTL = 30 * 60_000; // 30 min fresh window
+const COMMITS_TTL = 60 * 60_000; // 60 min fresh window
+const CACHE_MAX_AGE = 7 * 24 * 60 * 60_000; // 7 day hard expiry
+
+type CacheEntry<T> = { t: number; v: T };
+
+function lsRead<T>(key: string): CacheEntry<T> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(`gh:${CACHE_VERSION}:${key}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CacheEntry<T>;
+    if (!parsed || typeof parsed.t !== "number") return null;
+    if (Date.now() - parsed.t > CACHE_MAX_AGE) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function lsWrite<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      `gh:${CACHE_VERSION}:${key}`,
+      JSON.stringify({ t: Date.now(), v: value } satisfies CacheEntry<T>),
+    );
+  } catch {
+    /* quota / private mode — ignore */
+  }
+}
+
 async function fetchRepos(): Promise<Repo[]> {
   const r = await fetch(`https://api.github.com/users/${GH_USER}/repos?sort=pushed&per_page=6`);
-  if (!r.ok) throw new Error(r.status === 403 ? "GitHub rate limit reached." : `GitHub API error ${r.status}`);
+  if (!r.ok) {
+    const cached = lsRead<Repo[]>("repos");
+    if (cached) return cached.v;
+    throw new Error(r.status === 403 ? "GitHub rate limit reached." : `GitHub API error ${r.status}`);
+  }
   const data = (await r.json()) as Repo[];
-  return data.filter((r) => !r.fork).slice(0, 6);
+  const filtered = data.filter((r) => !r.fork).slice(0, 6);
+  lsWrite("repos", filtered);
+  return filtered;
 }
 
 async function fetchLatestCommit(repo: string): Promise<Commit | null> {
   try {
     const r = await fetch(`https://api.github.com/repos/${GH_USER}/${repo}/commits?per_page=1`);
-    if (!r.ok) return null;
+    if (!r.ok) {
+      const cached = lsRead<Commit | null>(`commit:${repo}`);
+      return cached ? cached.v : null;
+    }
     const data = (await r.json()) as Commit[];
-    return data[0] ?? null;
+    const latest = data[0] ?? null;
+    lsWrite(`commit:${repo}`, latest);
+    return latest;
   } catch {
-    return null;
+    const cached = lsRead<Commit | null>(`commit:${repo}`);
+    return cached ? cached.v : null;
   }
 }
 
@@ -647,10 +692,16 @@ function relTime(iso: string) {
 }
 
 function RepoCard({ repo }: { repo: Repo }) {
+  const initialCache = lsRead<Commit | null>(`commit:${repo.name}`);
   const { data: commit } = useQuery({
     queryKey: ["commit", repo.name],
     queryFn: () => fetchLatestCommit(repo.name),
-    staleTime: 5 * 60_000,
+    staleTime: COMMITS_TTL,
+    gcTime: CACHE_MAX_AGE,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    initialData: initialCache?.v,
+    initialDataUpdatedAt: initialCache?.t,
   });
   return (
     <a
@@ -693,12 +744,20 @@ function RepoCard({ repo }: { repo: Repo }) {
 }
 
 function GithubActivity() {
-  const { data, isLoading, error } = useQuery({
+  const initialCache =
+    typeof window !== "undefined" ? lsRead<Repo[]>("repos") : null;
+  const { data, isLoading, error, isFetching, dataUpdatedAt } = useQuery({
     queryKey: ["repos", GH_USER],
     queryFn: fetchRepos,
-    staleTime: 5 * 60_000,
+    staleTime: REPOS_TTL,
+    gcTime: CACHE_MAX_AGE,
     retry: 1,
+    refetchOnWindowFocus: false,
+    initialData: initialCache?.v,
+    initialDataUpdatedAt: initialCache?.t,
   });
+  const showError = !!error && !data;
+  const showStaleNotice = !!error && !!data;
   return (
     <section id="github" className="relative px-6 py-24 md:px-10 md:py-32">
       <div className="mx-auto max-w-[1400px]">
@@ -719,23 +778,37 @@ function GithubActivity() {
             @{GH_USER}
           </a>
         </div>
-        {isLoading && (
+        {isLoading && !data && (
           <div className="mono flex items-center gap-3 text-[11px] text-carbon/60">
             <Loader2 className="h-4 w-4 animate-spin" />
             Fetching repositories…
           </div>
         )}
-        {error && (
+        {showError && (
           <div className="mono border border-[#D1D1CB] p-6 text-[11px] text-carbon/70">
             {(error as Error).message} — try again later or view directly on GitHub.
           </div>
         )}
-        {data && (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {data.map((r) => (
-              <RepoCard key={r.id} repo={r} />
-            ))}
+        {showStaleNotice && (
+          <div className="mono mb-4 flex items-center gap-2 border border-[#D1D1CB] px-4 py-2 text-[10px] text-carbon/60">
+            <span className="h-1.5 w-1.5 rounded-full bg-cobalt" />
+            Showing cached activity — GitHub API unavailable.
           </div>
+        )}
+        {data && (
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {data.map((r) => (
+                <RepoCard key={r.id} repo={r} />
+              ))}
+            </div>
+            {dataUpdatedAt > 0 && (
+              <div className="mono mt-6 flex items-center gap-2 text-[10px] text-carbon/50">
+                {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
+                {isFetching ? "Revalidating…" : `Updated ${relTime(new Date(dataUpdatedAt).toISOString())}`}
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
