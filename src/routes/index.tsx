@@ -451,10 +451,27 @@ function Experience() {
                           : "border-white/10 hover:border-white/40"
                       }`}
                     >
-                      <div className={`mono text-[12px] ${isActive ? "text-cobalt" : "text-white"}`}>
-                        {e.company.toUpperCase()}
+                      <div className="flex items-center gap-3">
+                        {(e as any).logo ? (
+                          <img
+                            src={(e as any).logo}
+                            alt={`${e.company} logo`}
+                            className="h-8 w-8 shrink-0 rounded-sm bg-white object-contain p-1"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-white/15 bg-white/[0.04]">
+                            <span className="mono text-[10px] text-white/60">
+                              {e.company.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <div className={`mono text-[12px] ${isActive ? "text-cobalt" : "text-white"}`}>
+                            {e.company.toUpperCase()}
+                          </div>
+                          <div className="mono mt-1 text-[10px] text-white/50">{e.period}</div>
+                        </div>
                       </div>
-                      <div className="mono mt-1 text-[10px] text-white/50">{e.period}</div>
                     </button>
                   </li>
                 );
