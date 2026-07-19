@@ -54,7 +54,7 @@ const PROJECTS = [
     idx: "02",
     title: "Production AWS EC2 + DevSecOps",
     subtitle: "Monitoring · Security · Prometheus · Grafana",
-    year: "In Progress",
+    year: "2026",
     body:
       "Deployed a production-grade React + Node.js application on AWS EC2 using Nginx reverse proxy with HTTPS via Certbot SSL. Implemented server hardening: UFW Firewall, rate limiting, and DDoS protection. Built a full monitoring stack with Prometheus, Grafana, and Node Exporter. Integrated Trivy vulnerability scanning in CI/CD.",
     tech: ["Prometheus", "Grafana", "Node Exporter", "Trivy", "UFW", "Certbot"],
