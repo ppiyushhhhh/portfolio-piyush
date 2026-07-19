@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useScroll, useTransform, useMotionValue, animate } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
