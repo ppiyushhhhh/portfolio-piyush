@@ -268,7 +268,7 @@ function Hero() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mono flex flex-wrap items-center gap-3 text-cobalt text-[11px]"
         >
-          <span>PIYUSH_PRASAD.v2026</span>
+          <span>Piyush Prasad</span>
           <span className="text-[#D1D1CB]">—</span>
           <span>NAVI MUMBAI, INDIA</span>
           <span className="text-[#D1D1CB]">—</span>
