@@ -24,6 +24,7 @@ import awsLogo from "@/assets/aws-logo.jpg";
 import runtimeLogo from "@/assets/runtime-logo.png";
 import credenceLogo from "@/assets/credence-logo.png";
 import jkCollegeLogo from "@/assets/jk-college-logo.png";
+import allenSwamiLogo from "@/assets/allen-swami-logo.jpg";
 
 export const Route = createFileRoute("/")({
   component: PortfolioPage,
