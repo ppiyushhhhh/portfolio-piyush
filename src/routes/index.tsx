@@ -953,7 +953,7 @@ function Contact() {
         <SectionLabel n="006" label="CONTACT" dark />
         <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <h2 className="display text-[64px] leading-[0.88] md:text-[112px] lg:text-[128px]">
+            <h2 className="display text-[48px] leading-[0.88] sm:text-[64px] md:text-[112px] lg:text-[128px]">
               LET&apos;S
               <br />
               <span className="text-cobalt">BUILD</span>
