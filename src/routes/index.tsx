@@ -391,7 +391,7 @@ function Projects() {
             >
               <div className="mono text-cobalt text-[12px] transition-transform duration-500 group-hover:translate-x-2 lg:col-span-1">{p.idx}</div>
               <div className="lg:col-span-6">
-                <h3 className="display text-[40px] leading-[0.9] transition-all duration-500 group-hover:translate-x-2 group-hover:text-cobalt md:text-[64px] lg:text-[80px]">
+                <h3 className="display text-[32px] leading-[0.9] transition-all duration-500 group-hover:translate-x-2 group-hover:text-cobalt sm:text-[40px] md:text-[64px] lg:text-[80px]">
                   {p.title}
                 </h3>
                 <p className="mono mt-4 text-cobalt text-[11px]">{p.subtitle}</p>
@@ -440,7 +440,7 @@ function Experience() {
         <SectionLabel n="002" label="EXPERIENCE" dark />
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
-            <h2 className="display text-[56px] leading-[0.88] md:text-[80px]">
+            <h2 className="display text-[40px] leading-[0.88] sm:text-[56px] md:text-[80px]">
               WORK
               <br />
               <span className="text-cobalt">HISTORY</span>
@@ -512,7 +512,7 @@ function Experience() {
             <span className="mono inline-block border border-cobalt px-3 py-1 text-cobalt text-[10px]">
               {job.type}
             </span>
-            <h3 className="display mt-6 text-[40px] leading-[0.95] md:text-[56px]">{job.role.toUpperCase()}</h3>
+            <h3 className="display mt-6 text-[32px] leading-[0.95] sm:text-[40px] md:text-[56px]">{job.role.toUpperCase()}</h3>
             <p className="mono mt-3 text-cobalt text-[11px]">{job.period}</p>
             <ul className="mt-10 space-y-6">
               {job.bullets.map((b, i) => (
@@ -545,7 +545,7 @@ function Skills() {
         <SectionLabel n="003" label="THE STACK" />
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
-            <h2 className="display text-[56px] leading-[0.88] md:text-[80px]">
+            <h2 className="display text-[44px] leading-[0.88] sm:text-[56px] md:text-[80px]">
               THE
               <br />
               <span className="text-cobalt">STACK</span>
@@ -654,7 +654,7 @@ function Certifications() {
         <SectionLabel n="004" label="CERTIFICATIONS & EDUCATION" />
         <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <h2 className="display text-[48px] leading-[0.9] md:text-[72px]">CREDENTIALS</h2>
+            <h2 className="display text-[32px] leading-[0.9] sm:text-[48px] md:text-[72px]">CREDENTIALS</h2>
             <ul className="mt-10 divide-y divide-[#D1D1CB] border-t border-b border-[#D1D1CB]">
               {CERTS.map((c) => (
                 <motion.li
@@ -692,7 +692,7 @@ function Certifications() {
             </ul>
           </div>
           <div className="lg:col-span-5">
-            <h2 className="display text-[48px] leading-[0.9] md:text-[72px]">EDUCATION</h2>
+            <h2 className="display text-[40px] leading-[0.9] sm:text-[48px] md:text-[72px]">EDUCATION</h2>
             <div className="mt-10 space-y-4">
               {EDUCATION.map((e) => (
                 <motion.div
@@ -882,7 +882,7 @@ function GithubActivity() {
       <div className="mx-auto max-w-[1400px]">
         <SectionLabel n="005" label="GITHUB ACTIVITY" />
         <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
-          <h2 className="display text-[48px] leading-[0.9] md:text-[72px]">
+          <h2 className="display text-[40px] leading-[0.9] sm:text-[48px] md:text-[72px]">
             LIVE
             <br />
             <span className="text-cobalt">COMMITS</span>
@@ -953,7 +953,7 @@ function Contact() {
         <SectionLabel n="006" label="CONTACT" dark />
         <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <h2 className="display text-[64px] leading-[0.88] md:text-[112px] lg:text-[128px]">
+            <h2 className="display text-[48px] leading-[0.88] sm:text-[64px] md:text-[112px] lg:text-[128px]">
               LET&apos;S
               <br />
               <span className="text-cobalt">BUILD</span>
