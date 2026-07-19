@@ -24,6 +24,7 @@ import awsLogo from "@/assets/aws-logo.jpg";
 import runtimeLogo from "@/assets/runtime-logo.png";
 import credenceLogo from "@/assets/credence-logo.png";
 import jkCollegeLogo from "@/assets/jk-college-logo.png";
+import allenSwamiLogo from "@/assets/allen-swami-logo.jpg";
 
 export const Route = createFileRoute("/")({
   component: PortfolioPage,
@@ -117,7 +118,7 @@ const CERTS: { name: string; issuer: string; url?: string; logo?: string }[] = [
 
 const EDUCATION = [
   { period: "Jan 2022 — Mar 2025", degree: "Bachelor of Commerce (B.Com)", school: "Tilak Education Society's J.K. College of Science & Commerce", extra: "University of Mumbai", logo: jkCollegeLogo },
-  { period: "Aug 2019 — Jun 2021", degree: "Higher Secondary (Commerce)", school: "Allen Swami Vivekanand Junior College", extra: "MSSBHS" },
+  { period: "Aug 2019 — Jun 2021", degree: "Higher Secondary (Commerce)", school: "Allen Swami Vivekanand Junior College", extra: "MSSBHS", logo: allenSwamiLogo },
   { period: "Jun 2008 — Mar 2019", degree: "Secondary School", school: "Tilak Education Society's Tilak Global School", extra: "MSSBHS" },
 ];
 
