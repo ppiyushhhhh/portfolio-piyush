@@ -1,873 +1,893 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AnimatePresence, motion, useInView, MotionConfig } from "framer-motion";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Cloud,
-  Terminal,
-  GitBranch,
+  ArrowUpRight,
+  Copy,
+  Check,
+  Download,
   Github,
-  Workflow,
-  Container,
-  Server,
-  Globe,
-  Code2,
-  FileType2,
-  Wind,
-  Database,
-  Boxes,
-  ArrowRight,
-  ArrowLeft,
-  Mail,
   Linkedin,
-  FileDown,
-  ExternalLink,
+  Mail,
+  Phone,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  component: Index,
+  component: PortfolioPage,
 });
 
-/* ---------------- Data ---------------- */
+const GH_USER = "ppiyushhhhh";
+const EMAIL = "piyushprasad8122@gmail.com";
+const PHONE = "+91 9324236673";
+const LINKEDIN = "https://linkedin.com/in/ppiyushhhh";
+const GITHUB = "https://github.com/ppiyushhhhh";
 
-const CHAPTERS = [
-  { id: "cover", label: "Cover", num: "" },
-  { id: "about", label: "About", num: "01" },
-  { id: "skills", label: "Skills", num: "02" },
-  { id: "projects", label: "Projects", num: "03" },
-  { id: "experience", label: "Experience", num: "04" },
-  { id: "certs", label: "Certifications", num: "05" },
-  { id: "contact", label: "Contact", num: "06" },
-] as const;
-
-type PageId = (typeof CHAPTERS)[number]["id"];
-
-const SKILLS: { name: string; Icon: React.ComponentType<{ size?: number; className?: string }>; color: string }[] = [
-  { name: "AWS", Icon: Cloud, color: "#FFE0A8" },
-  { name: "Linux", Icon: Terminal, color: "#FFD6D6" },
-  { name: "Git", Icon: GitBranch, color: "#D9EFD1" },
-  { name: "GitHub", Icon: Github, color: "#E4DAF7" },
-  { name: "GitHub Actions", Icon: Workflow, color: "#CFE4FF" },
-  { name: "Docker", Icon: Container, color: "#CFE9FF" },
-  { name: "Cloudflare", Icon: Globe, color: "#FFE0B0" },
-  { name: "Nginx", Icon: Server, color: "#D9F0DC" },
-  { name: "React", Icon: Code2, color: "#CFEEFB" },
-  { name: "TypeScript", Icon: FileType2, color: "#CFE4FF" },
-  { name: "Tailwind", Icon: Wind, color: "#CFEBF3" },
-  { name: "MongoDB", Icon: Database, color: "#D9F0DC" },
-  { name: "Node.js", Icon: Boxes, color: "#DDEED0" },
-];
-
-/* ---------------- Root ---------------- */
-
-function Index() {
-  const [page, setPage] = useState<PageId>("cover");
-  const [dir, setDir] = useState<1 | -1>(1);
-
-  const go = (id: PageId) => {
-    const from = CHAPTERS.findIndex((c) => c.id === page);
-    const to = CHAPTERS.findIndex((c) => c.id === id);
-    if (id === page) return;
-    setDir(to >= from ? 1 : -1);
-    setPage(id);
-  };
-
-  const idx = CHAPTERS.findIndex((c) => c.id === page);
-  const prev = idx > 0 ? CHAPTERS[idx - 1] : null;
-  const next = idx < CHAPTERS.length - 1 ? CHAPTERS[idx + 1] : null;
-
-
-  return (
-    <MotionConfig reducedMotion="user">
-    <main className="min-h-screen w-full" style={{ backgroundColor: "var(--color-desk)" }}>
-      <DeskBackdrop />
-
-      {/* top nav */}
-      <nav className="sticky top-0 z-30 backdrop-blur-sm" style={{ backgroundColor: "rgba(247,242,232,0.85)", borderBottom: "1px solid var(--color-edge)" }}>
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <button
-            onClick={() => go("cover")}
-            className="font-[family-name:var(--font-hand)] text-2xl leading-none"
-            style={{ color: "var(--color-ink)" }}
-          >
-            Piyush's Notebook
-          </button>
-          <div className="hidden gap-5 md:flex font-[family-name:var(--font-nav)] text-xs uppercase tracking-widest">
-            {CHAPTERS.slice(1).map((c) => (
-              <button
-                key={c.id}
-                onClick={() => go(c.id)}
-                className="relative transition-colors"
-                style={{ color: page === c.id ? "var(--color-accent)" : "var(--color-ink)" }}
-              >
-                {c.label}
-                {page === c.id && (
-                  <motion.span
-                    layoutId="nav-underline"
-                    className="absolute -bottom-1 left-0 right-0 h-[2px]"
-                    style={{ backgroundColor: "var(--color-accent)" }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </nav>
-
-
-
-      {/* page stage */}
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:py-12" style={{ perspective: 2000 }}>
-        <AnimatePresence mode="wait" custom={dir}>
-          <motion.div
-            key={page}
-            custom={dir}
-            initial={{ rotateY: dir === 1 ? 35 : -35, opacity: 0, x: dir === 1 ? 40 : -40 }}
-            animate={{ rotateY: 0, opacity: 1, x: 0 }}
-            exit={{ rotateY: dir === 1 ? -35 : 35, opacity: 0, x: dir === 1 ? -40 : 40 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            style={{ transformOrigin: dir === 1 ? "left center" : "right center", transformStyle: "preserve-3d" }}
-          >
-            {page === "cover" && <CoverPage go={go} />}
-            {page === "about" && <AboutPage />}
-            {page === "skills" && <SkillsPage />}
-            {page === "projects" && <ProjectsPage />}
-            {page === "experience" && <ExperiencePage />}
-            {page === "certs" && <CertsPage />}
-            {page === "contact" && <ContactPage />}
-          </motion.div>
-        </AnimatePresence>
-
-        {/* prev / next */}
-        <div className="mx-auto mt-8 flex max-w-3xl items-center justify-between gap-4 px-2 font-[family-name:var(--font-hand)] text-lg" style={{ color: "var(--color-accent)" }}>
-          {prev ? (
-            <button
-              onClick={() => go(prev.id)}
-              
-              className="inline-flex items-center gap-2 rounded-sm border-2 px-4 py-1.5 font-bold transition-transform hover:translate-x-[-1px] hover:translate-y-[1px] hover:bg-black hover:text-white hover:shadow-[2px_2px_0_0_var(--color-ink)] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              style={{ borderColor: "var(--color-ink)", color: "var(--color-ink)", backgroundColor: "var(--color-paper)", boxShadow: "3px 3px 0 0 var(--color-ink)" }}
-            >
-              <ArrowLeft size={18} /> ← Prev {prev.label}
-            </button>
-          ) : <span />}
-          {next ? (
-            <button
-              onClick={() => go(next.id)}
-              
-              className="inline-flex items-center gap-2 rounded-sm border-2 px-4 py-1.5 font-bold transition-transform hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-black hover:text-white hover:shadow-[2px_2px_0_0_var(--color-ink)] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              style={{ borderColor: "var(--color-ink)", color: "var(--color-ink)", backgroundColor: "var(--color-paper)", boxShadow: "3px 3px 0 0 var(--color-ink)" }}
-            >
-              Next → {next.label} <ArrowRight size={18} />
-            </button>
-          ) : <span />}
-        </div>
-
-      </div>
-    </main>
-    </MotionConfig>
-  );
-}
-
-/* ---------------- Reusable page shell ---------------- */
-
-function NotebookPage({
-  children,
-  pageNum,
-  chapterLabel,
-}: {
-  children: React.ReactNode;
-  pageNum?: string;
-  chapterLabel?: string;
-}) {
-  return (
-    <div className="relative mx-auto max-w-3xl">
-      {/* stacked page shadows to hint at pages beneath */}
-      <div className="pointer-events-none absolute inset-0 translate-x-2 translate-y-2 rounded-sm" style={{ backgroundColor: "#EFE9DC", boxShadow: "0 20px 40px -20px rgba(0,0,0,.15)" }} />
-      <div className="pointer-events-none absolute inset-0 translate-x-1 translate-y-1 rounded-sm" style={{ backgroundColor: "#F4EFE2" }} />
-
-      <article
-        className="paper relative rounded-sm"
-        style={{
-          boxShadow: "0 1px 2px rgba(0,0,0,.08), 0 30px 60px -30px rgba(0,0,0,.25)",
-          minHeight: "min(80vh, 780px)",
-        }}
-      >
-        {/* folded top-right corner */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute right-0 top-0"
-          style={{
-            width: 44,
-            height: 44,
-            background: "linear-gradient(225deg, var(--color-desk) 50%, rgba(0,0,0,.08) 50%, rgba(0,0,0,.08) 55%, transparent 55%)",
-          }}
-        />
-
-        {/* chapter tag */}
-        {chapterLabel && (
-          <div className="absolute right-6 top-4 font-[family-name:var(--font-nav)] text-[10px] uppercase tracking-[0.3em]" style={{ color: "var(--color-accent)" }}>
-            {chapterLabel}
-          </div>
-        )}
-
-        <div className="pl-16 pr-8 py-14 sm:pl-24 sm:pr-14 sm:py-16">
-          {children}
-        </div>
-
-        {/* page number */}
-        {pageNum && (
-          <div className="absolute bottom-4 right-6 font-[family-name:var(--font-hand)] text-lg" style={{ color: "var(--color-accent)" }}>
-            — {pageNum} —
-          </div>
-        )}
-      </article>
-    </div>
-  );
-}
-
-/* ---------------- Cover / TOC ---------------- */
-
-function CoverPage({ go }: { go: (id: PageId) => void }) {
-  return (
-    <NotebookPage>
-      <div className="text-center">
-        <p className="font-[family-name:var(--font-nav)] text-xs uppercase tracking-[0.4em]" style={{ color: "var(--color-accent)" }}>
-          Property of
-        </p>
-        <motion.h1
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.6 }}
-          className="mt-4 font-[family-name:var(--font-hand)] text-6xl sm:text-8xl font-bold leading-none"
-          style={{ color: "var(--color-ink)" }}
-        >
-          Piyush Prasad
-        </motion.h1>
-        <p className="mt-3 font-[family-name:var(--font-hand-alt)] text-2xl sm:text-3xl" style={{ color: "var(--color-accent)" }}>
-          Engineering Notebook
-        </p>
-        <div className="mx-auto mt-4 h-[2px] w-24" style={{ backgroundColor: "var(--color-ink)" }} />
-        <p className="mt-3 font-[family-name:var(--font-mono)] text-xs" style={{ color: "var(--color-ink)", opacity: 0.78 }}>
-          Vol. I · Cloud & DevOps · 2022 — Present
-        </p>
-      </div>
-
-      <nav aria-labelledby="toc-heading" className="mx-auto mt-12 max-w-md">
-        <h2 id="toc-heading" className="font-[family-name:var(--font-hand)] text-3xl mb-4" style={{ color: "var(--color-ink)" }}>
-          Contents
-        </h2>
-        <ol className="space-y-3 font-[family-name:var(--font-hand-alt)] text-xl">
-          {CHAPTERS.slice(1).map((c, i) => {
-            const pageLabel = String(i + 1).padStart(2, "0");
-            return (
-              <motion.li
-                key={c.id}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.25 + i * 0.06 }}
-              >
-                <button
-                  onClick={() => go(c.id)}
-                  className="group flex w-full items-baseline gap-3 rounded-sm px-1 py-0.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                  style={
-                    {
-                      color: "var(--color-ink)",
-                      "--tw-ring-color": "var(--color-accent)",
-                      "--tw-ring-offset-color": "var(--color-paper)",
-                    } as React.CSSProperties
-                  }
-                >
-                  <span style={{ color: "var(--color-accent)" }}>{c.num}</span>
-                  <span className="group-hover:marker-hi transition-all">{c.label}</span>
-                  <span aria-hidden="true" className="flex-1 border-b border-dotted" style={{ borderColor: "var(--color-ink)", opacity: 0.4 }} />
-                  <span style={{ color: "var(--color-accent)" }}>p. {pageLabel}</span>
-                </button>
-              </motion.li>
-            );
-          })}
-        </ol>
-      </nav>
-
-
-      {/* doodles */}
-      <svg className="pointer-events-none absolute bottom-8 left-24 opacity-40" width="90" height="60" viewBox="0 0 90 60" fill="none" style={{ color: "var(--color-accent)" }}>
-        <path d="M10 40 Q 20 20 35 30 T 65 25 T 85 35" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="2 3" />
-        <circle cx="85" cy="35" r="2.5" fill="currentColor" />
-      </svg>
-    </NotebookPage>
-  );
-}
-
-/* ---------------- About ---------------- */
-
-function AboutPage() {
-  return (
-    <NotebookPage pageNum="01" chapterLabel="Chapter 01 · About">
-      <p className="font-[family-name:var(--font-hand-alt)] text-xl" style={{ color: "var(--color-accent)" }}>
-        Hello.
-      </p>
-      <h2 className="mt-1 font-[family-name:var(--font-hand)] text-5xl sm:text-6xl font-bold leading-tight" style={{ color: "var(--color-ink)" }}>
-        I'm Piyush Prasad.
-      </h2>
-      <p className="mt-2 font-[family-name:var(--font-hand-alt)] text-2xl" style={{ color: "var(--color-ink)" }}>
-        Cloud & DevOps Engineer.
-      </p>
-
-      <div className="mt-8 grid gap-8 md:grid-cols-2 md:items-start">
-        <div className="space-y-4 text-[15px] leading-relaxed" style={{ color: "var(--color-ink)" }}>
-          <p>
-            I build reliable cloud infrastructure, automate deployments, and solve
-            real-world IT operations problems. This notebook is where I keep track of it all.
-          </p>
-          <p>
-            I started at the help desk — resolving tickets, keeping SLAs green, learning
-            how systems <span className="marker-hi">really</span> break. Curiosity pulled
-            me toward the servers behind the tickets, and eventually toward the cloud.
-          </p>
-          <p>
-            Today I'm shipping production deployments on <span className="font-[family-name:var(--font-mono)]">AWS EC2</span>,
-            wiring up CI/CD with <span className="font-[family-name:var(--font-mono)]">GitHub Actions</span>,
-            hardening Linux, and adding observability so nothing ships blind.
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-3 font-[family-name:var(--font-nav)] text-sm">
-            <a href="#" onClick={(e) => { e.preventDefault(); document.querySelector<HTMLButtonElement>("[data-nav-projects]")?.click(); }} className="inline-flex items-center gap-2 rounded-sm border-2 border-[color:var(--color-ink)] bg-[color:var(--color-paper)] px-4 py-2 shadow-[3px_3px_0_0_var(--color-ink)] transition-transform hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_var(--color-ink)]" style={{ color: "var(--color-ink)" }}>
-              View Projects <ArrowRight size={14} />
-            </a>
-            <a href="mailto:piyush.piyushprasad.in" className="inline-flex items-center gap-2 rounded-sm px-4 py-2 font-medium transition-opacity hover:opacity-75" style={{ color: "var(--color-accent)" }}>
-              <FileDown size={14} /> Download Resume
-            </a>
-          </div>
-        </div>
-
-        {/* sketch */}
-        <div className="relative">
-          <p className="font-[family-name:var(--font-hand-alt)] text-lg mb-2" style={{ color: "var(--color-accent)" }}>
-            fig. 1 — how my app ships
-          </p>
-          <ArchitectureSketch />
-        </div>
-      </div>
-
-      {/* Journey timeline */}
-      <div className="mt-12">
-        <p className="font-[family-name:var(--font-hand)] text-2xl mb-4" style={{ color: "var(--color-ink)" }}>
-          the journey so far →
-        </p>
-        <div className="flex flex-wrap items-center gap-3 font-[family-name:var(--font-hand-alt)] text-lg" style={{ color: "var(--color-ink)" }}>
-          <Milestone label="IT Support" year="'22" />
-          <HandArrow />
-          <Milestone label="Linux + Networking" year="'23" />
-          <HandArrow />
-          <Milestone label="AWS + CI/CD" year="'24" />
-          <HandArrow />
-          <Milestone label="DevSecOps" year="'25" highlight />
-        </div>
-      </div>
-    </NotebookPage>
-  );
-}
-
-function Milestone({ label, year, highlight }: { label: string; year: string; highlight?: boolean }) {
-  return (
-    <div className="rounded-sm px-3 py-1.5" style={{ backgroundColor: highlight ? "#FFF3A3" : "transparent", border: highlight ? "none" : "1px dashed var(--color-ink)", opacity: highlight ? 1 : 0.85 }}>
-      <span className="font-[family-name:var(--font-mono)] text-xs mr-2" style={{ color: "var(--color-accent)" }}>{year}</span>
-      {label}
-    </div>
-  );
-}
-
-function HandArrow() {
-  return (
-    <svg width="40" height="20" viewBox="0 0 40 20" fill="none" style={{ color: "var(--color-accent)" }}>
-      <path d="M2 10 Q 15 4 30 10" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-      <path d="M24 5 L 32 10 L 24 14" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ArchitectureSketch() {
-  return (
-    <svg viewBox="0 0 340 260" className="w-full max-w-sm" style={{ color: "var(--color-ink)" }}>
-      <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
-        </marker>
-      </defs>
-      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        {/* GitHub */}
-        <rect x="20" y="20" width="120" height="52" rx="4" strokeDasharray="0" />
-        <text x="80" y="45" textAnchor="middle" fontFamily="Patrick Hand" fontSize="16" fill="currentColor" stroke="none">GitHub</text>
-        <text x="80" y="62" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="10" fill="currentColor" stroke="none" opacity="0.6">git push</text>
-
-        {/* Actions */}
-        <rect x="200" y="20" width="120" height="52" rx="4" />
-        <text x="260" y="45" textAnchor="middle" fontFamily="Patrick Hand" fontSize="16" fill="currentColor" stroke="none">Actions CI/CD</text>
-        <text x="260" y="62" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="10" fill="currentColor" stroke="none" opacity="0.6">build + ssh</text>
-
-        {/* EC2 */}
-        <rect x="110" y="110" width="140" height="60" rx="4" />
-        <text x="180" y="138" textAnchor="middle" fontFamily="Patrick Hand" fontSize="16" fill="currentColor" stroke="none">AWS EC2 · Nginx</text>
-        <text x="180" y="156" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="10" fill="currentColor" stroke="none" opacity="0.6">Ubuntu + SSL</text>
-
-        {/* Cloudflare */}
-        <rect x="90" y="200" width="180" height="42" rx="4" />
-        <text x="180" y="226" textAnchor="middle" fontFamily="Patrick Hand" fontSize="16" fill="currentColor" stroke="none">Cloudflare · DNS + Email</text>
-
-        {/* arrows */}
-        <path d="M140 46 L 200 46" markerEnd="url(#arrow)" />
-        <path d="M260 72 Q 260 92 220 110" markerEnd="url(#arrow)" />
-        <path d="M180 170 L 180 200" markerEnd="url(#arrow)" />
-
-        {/* doodle star */}
-        <path d="M300 190 l 3 6 l 6 1 l -4 4 l 1 6 l -6 -3 l -6 3 l 1 -6 l -4 -4 l 6 -1 z" fill="#FFE0A8" stroke="currentColor" strokeWidth="1" />
-      </g>
-    </svg>
-  );
-}
-
-/* ---------------- Skills ---------------- */
-
-function SkillsPage() {
-  return (
-    <NotebookPage pageNum="02" chapterLabel="Chapter 02 · Skills">
-      <p className="font-[family-name:var(--font-hand-alt)] text-xl" style={{ color: "var(--color-accent)" }}>
-        stuck to the page —
-      </p>
-      <h2 className="mt-1 font-[family-name:var(--font-hand)] text-5xl font-bold" style={{ color: "var(--color-ink)" }}>
-        Things I reach for.
-      </h2>
-      <p className="mt-3 max-w-lg text-[15px]" style={{ color: "var(--color-ink)" }}>
-        No progress bars — those never told the truth anyway. Just the tools I actually
-        pull off the shelf when it's time to ship.
-      </p>
-
-      <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 md:grid-cols-4">
-        {SKILLS.map((s, i) => (
-          <StickyNote key={s.name} name={s.name} Icon={s.Icon} color={s.color} index={i} />
-        ))}
-      </div>
-    </NotebookPage>
-  );
-}
-
-function StickyNote({
-  name,
-  Icon,
-  color,
-  index,
-}: {
-  name: string;
-  Icon: React.ComponentType<{ size?: number; className?: string }>;
-  color: string;
-  index: number;
-}) {
-  const rot = ((index * 37) % 7) - 3; // deterministic pseudo-random
-  const ref = useRef<HTMLDivElement | null>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: -30, rotate: rot - 5 }}
-      animate={inView ? { opacity: 1, y: 0, rotate: rot } : {}}
-      transition={{ delay: 0.05 * index, type: "spring", stiffness: 220, damping: 18 }}
-      whileHover={{ rotate: 0, y: -4, scale: 1.03 }}
-      className="relative aspect-square"
-    >
-      {/* tape */}
-      <div className="absolute left-1/2 top-[-10px] h-4 w-16 -translate-x-1/2" style={{ backgroundColor: "rgba(255, 243, 163, 0.75)", boxShadow: "0 1px 2px rgba(0,0,0,.06)" }} />
-      <div
-        className="flex h-full w-full flex-col items-center justify-center gap-2 p-3"
-        style={{
-          backgroundColor: color,
-          boxShadow: "0 10px 20px -10px rgba(0,0,0,.25), inset 0 -6px 0 rgba(0,0,0,.04)",
-        }}
-      >
-        <Icon size={26} className="opacity-80" />
-        <span className="text-center font-[family-name:var(--font-hand)] text-xl leading-tight" style={{ color: "var(--color-ink)" }}>
-          {name}
-        </span>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ---------------- Projects ---------------- */
+/* ---------- Data ---------- */
 
 const PROJECTS = [
   {
-    title: "Production Portfolio",
-    period: "Live · 2024",
-    link: { href: "https://kamleshprasad.xyz", label: "kamleshprasad.xyz" },
-    problem: "A React site needed to ship on every push without me babysitting the server.",
-    solution:
-      "Automated the whole path: GitHub Actions builds, SSHes into EC2, and reloads Nginx behind Cloudflare DNS + email routing.",
-    tech: ["AWS EC2", "Ubuntu", "Nginx", "GitHub Actions", "Cloudflare", "React", "SSH", "SPF/DKIM/DMARC"],
-    result: "Zero-touch deploys, sub-second reloads, mail delivered clean.",
+    idx: "01",
+    title: "DevOps CI/CD Pipeline",
+    subtitle: "AWS · Nginx · Cloudflare · GitHub Actions",
+    year: "2025",
+    body:
+      "Designed and implemented a full CI/CD pipeline using GitHub Actions to automate deployment of a React application. Deployed on AWS EC2 (Ubuntu), configured Nginx as a reverse proxy. Managed domain routing with Cloudflare and implemented secure domain-based email via SPF, DKIM, and DMARC.",
+    tech: ["CI/CD", "AWS EC2", "Nginx", "Cloudflare", "GitHub Actions", "SSH Auth"],
+    link: { label: "kamleshprasad.xyz", href: "https://kamleshprasad.xyz" },
   },
   {
-    title: "Hardened EC2 with Monitoring",
-    period: "In Progress · Live Project",
-    problem: "A public server needs to survive scanners, script kiddies, and my own bad days.",
-    solution:
-      "React + Node behind Nginx with Certbot SSL, UFW, rate limits, Nginx return 444, and Basic Auth on admin paths. Prometheus + Grafana + Node Exporter watch it. Trivy scans in CI.",
-    tech: ["AWS EC2", "Nginx", "Certbot", "UFW", "Prometheus", "Grafana", "Node Exporter", "Trivy"],
-    result: "Metrics visible, attack surface narrowed, DevSecOps muscles built.",
+    idx: "02",
+    title: "Production AWS EC2 + DevSecOps",
+    subtitle: "Monitoring · Security · Prometheus · Grafana",
+    year: "In Progress",
+    body:
+      "Deployed a production-grade React + Node.js application on AWS EC2 using Nginx reverse proxy with HTTPS via Certbot SSL. Implemented server hardening: UFW Firewall, rate limiting, and DDoS protection. Built a full monitoring stack with Prometheus, Grafana, and Node Exporter. Integrated Trivy vulnerability scanning in CI/CD.",
+    tech: ["Prometheus", "Grafana", "Node Exporter", "Trivy", "UFW", "Certbot"],
+    link: null,
   },
 ];
 
-function ProjectsPage() {
-  return (
-    <NotebookPage pageNum="03" chapterLabel="Chapter 03 · Projects">
-      <h2 className="font-[family-name:var(--font-hand)] text-5xl font-bold" style={{ color: "var(--color-ink)" }}>
-        What I've been building.
-      </h2>
-      <p className="mt-2 max-w-lg text-[15px]" style={{ color: "var(--color-ink)" }}>
-        Two projects I keep going back to. Each one taught me a whole shelf of things
-        I couldn't have read into me.
-      </p>
-
-      <div className="mt-10 space-y-14">
-        {PROJECTS.map((p, i) => (
-          <ProjectEntry key={p.title} project={p} index={i} />
-        ))}
-      </div>
-    </NotebookPage>
-  );
-}
-
-function ProjectEntry({ project, index }: { project: (typeof PROJECTS)[number]; index: number }) {
-  return (
-    <div className="relative">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h3 className="font-[family-name:var(--font-hand)] text-3xl font-bold" style={{ color: "var(--color-ink)" }}>
-          <span style={{ color: "var(--color-accent)" }}>Nº 0{index + 1}.</span> {project.title}
-        </h3>
-        <span className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-widest" style={{ color: "var(--color-accent)" }}>
-          {project.period}
-        </span>
-      </div>
-
-      {project.link && (
-        <a href={project.link.href} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 font-[family-name:var(--font-hand-alt)] text-lg ink-underline" style={{ color: "var(--color-accent)" }}>
-          {project.link.label} <ExternalLink size={12} />
-        </a>
-      )}
-
-      <div className="mt-4 grid gap-5 md:grid-cols-2">
-        <ProjectField label="Problem" body={project.problem} />
-        <ProjectField label="Solution" body={project.solution} />
-        <ProjectField label="Result" body={project.result} />
-        <div>
-          <p className="font-[family-name:var(--font-hand)] text-xl mb-2" style={{ color: "var(--color-accent)" }}>
-            Tech
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {project.tech.map((t) => (
-              <span
-                key={t}
-                className="rounded-sm px-2 py-0.5 font-[family-name:var(--font-mono)] text-[11px]"
-                style={{ border: "1px solid var(--color-ink)", color: "var(--color-ink)", backgroundColor: "rgba(255,255,255,0.4)" }}
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProjectField({ label, body }: { label: string; body: string }) {
-  return (
-    <div>
-      <p className="font-[family-name:var(--font-hand)] text-xl mb-1" style={{ color: "var(--color-accent)" }}>
-        {label}
-      </p>
-      <p className="text-[14.5px] leading-relaxed" style={{ color: "var(--color-ink)" }}>
-        {body}
-      </p>
-    </div>
-  );
-}
-
-/* ---------------- Experience ---------------- */
-
-const TIMELINE = [
+const EXPERIENCE = [
   {
-    year: "Feb 2022",
-    title: "IT Service Management Consultant",
-    org: "Credence Infotech",
-    period: "Feb 2022 – Oct 2024",
+    company: "Runtime Solutions",
+    role: "IT Office Assistant",
+    type: "Full-Time",
+    period: "Dec 2024 — Present",
     bullets: [
-      "Delivered ITSM operations aligned with ITIL best practices, supporting incident, problem, and change management processes.",
+      "Managed end-to-end ITSM ticket lifecycle including incidents, service requests, and escalations across multiple locations using ManageEngine ServiceDesk Plus.",
+      "Maintained SLA compliance by prioritizing critical issues, minimizing downtime, and ensuring timely resolution.",
+      "Administered IT asset lifecycle for laptops, desktops, access points, and biometric devices with accurate tracking and documentation.",
+      "Coordinated with internal teams and external vendors to resolve hardware, network, and system issues within defined SLAs.",
+      "Supported daily IT operations including ticket logging, categorization, escalation handling, and documentation.",
+    ],
+  },
+  {
+    company: "Credence Infotech",
+    role: "IT Support Coordinator",
+    type: "Full-Time",
+    period: "Feb 2022 — Oct 2024",
+    bullets: [
+      "Provided operational support for IT infrastructure, service management, and change management processes.",
       "Acted as a coordination point between technical teams and stakeholders to ensure smooth and efficient service delivery.",
       "Monitored service performance and maintained adherence to defined operational standards and client SLAs.",
       "Contributed to process improvement initiatives to enhance service efficiency and overall customer satisfaction.",
       "Provided operational support and consultation to improve IT service quality and system reliability.",
     ],
   },
-  {
-    year: "Dec 2024",
-    title: "IT Office Assistant",
-    org: "Runtime Solutions",
-    period: "Dec 2024 – Present",
-    bullets: [
-      "Managed end-to-end ITSM ticket lifecycle including incidents, service requests, and escalations across multiple locations using ManageEngine ServiceDesk Plus.",
-      "Maintained SLA compliance by prioritizing critical issues, minimizing downtime, and ensuring timely resolution.",
-      "Administered IT asset lifecycle for laptops, desktops, access points, and biometric devices with accurate tracking and documentation.",
-      "Coordinated with internal teams and external vendors to resolve hardware, network, and system issues within defined SLAs.",
-      "Supported daily IT operations including ticket logging, categorization, escalation handling, and documentation to ensure service continuity.",
-    ],
-  },
-  {
-    year: "2024 → now",
-    title: "Cloud & DevOps Projects",
-    org: "Self-directed",
-    period: "Ongoing",
-    bullets: [
-      "Production deployments on AWS EC2 with Nginx + Cloudflare.",
-      "CI/CD via GitHub Actions, Trivy scans, Prometheus/Grafana observability.",
-    ],
-  },
 ];
 
-function ExperiencePage() {
-  return (
-    <NotebookPage pageNum="04" chapterLabel="Chapter 04 · Experience">
-      <h2 className="font-[family-name:var(--font-hand)] text-5xl font-bold" style={{ color: "var(--color-ink)" }}>
-        The timeline.
-      </h2>
-      <p className="mt-2 max-w-lg text-[15px]" style={{ color: "var(--color-ink)" }}>
-        Drawn top to bottom, like all good notebook things.
-      </p>
-
-      <div className="relative mt-10 pl-8">
-        {/* dashed vertical spine */}
-        <div className="absolute bottom-4 left-2 top-4 border-l-2 border-dashed" style={{ borderColor: "var(--color-accent)" }} />
-        <div className="space-y-8">
-          {TIMELINE.map((t, i) => (
-            <TimelineEntry key={t.title} item={t} index={i} />
-          ))}
-        </div>
-      </div>
-    </NotebookPage>
-  );
-}
-
-function TimelineEntry({ item, index }: { item: (typeof TIMELINE)[number]; index: number }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, x: -12 }}
-      animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{ delay: index * 0.08 }}
-      className="relative"
-    >
-      {/* node dot */}
-      <div
-        className="absolute -left-[30px] top-2 flex h-5 w-5 items-center justify-center rounded-full"
-        style={{
-          backgroundColor: "var(--color-accent)",
-          border: "2px solid var(--color-accent)",
-        }}
-      />
-      <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-widest" style={{ color: "var(--color-accent)" }}>
-        {item.year}
-      </p>
-      <h3 className="mt-0.5 font-[family-name:var(--font-hand)] text-2xl font-bold" style={{ color: "var(--color-ink)" }}>
-        {item.title} <span className="font-normal italic" style={{ color: "var(--color-accent)" }}>· {item.org}</span>
-      </h3>
-      <p className="text-xs" style={{ color: "var(--color-ink)", opacity: 0.78 }}>{item.period}</p>
-      <ul className="mt-2 space-y-1 pl-4 text-[14.5px]" style={{ color: "var(--color-ink)" }}>
-        {item.bullets.map((b) => (
-          <li key={b} className="relative">
-            <span className="absolute -left-4 top-2 h-[3px] w-[3px] rounded-full" style={{ backgroundColor: "var(--color-ink)" }} />
-            {b}
-          </li>
-        ))}
-      </ul>
-    </motion.div>
-  );
-}
-
-/* ---------------- Certifications ---------------- */
+const SKILL_CATS = [
+  { label: "Cloud", tags: ["AWS EC2", "AWS S3", "AWS IAM"] },
+  { label: "Operating Systems", tags: ["Linux (Ubuntu)", "Server Administration"] },
+  { label: "DevOps Tools", tags: ["GitHub", "GitHub Actions", "Trivy"] },
+  { label: "Web Server", tags: ["Nginx", "Reverse Proxy", "Load Balancing"] },
+  { label: "CI/CD", tags: ["Pipeline Automation", "Continuous Deployment", "SSH Auth"] },
+  { label: "Monitoring", tags: ["Prometheus", "Grafana", "Node Exporter"] },
+  { label: "Security", tags: ["SSL/HTTPS", "UFW Firewall", "Rate Limiting", "Vulnerability Scanning", "DKIM/SPF/DMARC"] },
+  { label: "ITSM", tags: ["ManageEngine ServiceDesk Plus", "ITIL Practices", "SLA Management"] },
+];
 
 const CERTS = [
-  { name: "Ubuntu Linux Professional", issuer: "Canonical", color: "#FFE0A8" },
-  { name: "GitHub Professional", issuer: "GitHub", color: "#E4DAF7" },
-  { name: "AWS Cloud Essentials", issuer: "AWS", color: "#FFD6D6" },
-  { name: "Linux Upgrade & Patch Mgmt", issuer: "LinkedIn Learning", color: "#CFE4FF" },
-  { name: "DNS Fundamentals", issuer: "Packt", color: "#D9F0DC" },
-  { name: "DevSecOps Basics", issuer: "Self-study", color: "#FFF3A3" },
+  { name: "Ubuntu Linux Professional Certificate", issuer: "Canonical" },
+  { name: "Career Essentials in GitHub Professional Certificate", issuer: "GitHub" },
+  { name: "AWS Knowledge: Cloud Essentials — Training Badge", issuer: "Amazon Web Services" },
+  { name: "Linux System Upgrade and Patch Management", issuer: "LinkedIn Learning" },
+  { name: "DNS", issuer: "Packt" },
 ];
 
-function CertsPage() {
-  return (
-    <NotebookPage pageNum="05" chapterLabel="Chapter 05 · Certifications">
-      <h2 className="font-[family-name:var(--font-hand)] text-5xl font-bold" style={{ color: "var(--color-ink)" }}>
-        Taped in for safekeeping.
-      </h2>
-      <p className="mt-2 max-w-lg text-[15px]" style={{ color: "var(--color-ink)" }}>
-        The paper receipts of learning.
-      </p>
+const EDUCATION = [
+  { period: "Jan 2022 — Mar 2025", degree: "Bachelor of Commerce (B.Com)", school: "Tilak Education Society's J.K. College of Science & Commerce", extra: "University of Mumbai" },
+  { period: "Aug 2019 — Jun 2021", degree: "Higher Secondary (Commerce)", school: "Allen Swami Vivekanand Junior College", extra: "MSSBHS" },
+  { period: "Jun 2008 — Mar 2019", degree: "Secondary School", school: "Tilak Education Society's Tilak Global School", extra: "MSSBHS" },
+];
 
-      <div className="mt-12 grid gap-10 sm:grid-cols-2 md:grid-cols-3">
-        {CERTS.map((c, i) => (
-          <TapedCert key={c.name} cert={c} index={i} />
+const NAV = [
+  { id: "projects", label: "Projects" },
+  { id: "experience", label: "Experience" },
+  { id: "skills", label: "Skills" },
+  { id: "certifications", label: "Certifications" },
+  { id: "github", label: "GitHub" },
+  { id: "contact", label: "Contact" },
+];
+
+/* ---------- Motion helpers ---------- */
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 90, damping: 18, mass: 0.9 } },
+};
+
+/* ---------- Blueprint grid overlay ---------- */
+
+function BlueprintGrid() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+      <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 100">
+        {Array.from({ length: 13 }).map((_, i) => (
+          <motion.line
+            key={i}
+            x1={(i * 1200) / 12}
+            x2={(i * 1200) / 12}
+            y1={0}
+            y2={100}
+            stroke="#D1D1CB"
+            strokeWidth={0.3}
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 0.6 }}
+            transition={{ duration: 1.2, delay: i * 0.05, ease: "easeOut" }}
+          />
         ))}
-      </div>
-    </NotebookPage>
+      </svg>
+    </div>
   );
 }
 
-function TapedCert({ cert, index }: { cert: (typeof CERTS)[number]; index: number }) {
-  const rot = ((index * 53) % 9) - 4;
-  const ref = useRef<HTMLDivElement | null>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 20, rotate: rot }}
-      animate={inView ? { opacity: 1, y: 0, rotate: rot } : {}}
-      transition={{ delay: index * 0.07 }}
-      whileHover={{ rotate: 0, y: -4 }}
-      className="relative"
-    >
-      {/* tape strips */}
-      <div className="absolute left-[-8px] top-[-8px] h-5 w-16 rotate-[-25deg]" style={{ backgroundColor: "rgba(255, 243, 163, 0.72)", boxShadow: "0 1px 2px rgba(0,0,0,.05)" }} />
-      <div className="absolute right-[-8px] top-[-6px] h-5 w-14 rotate-[20deg]" style={{ backgroundColor: "rgba(255, 243, 163, 0.72)", boxShadow: "0 1px 2px rgba(0,0,0,.05)" }} />
+/* ---------- Top nav ---------- */
 
+function TopNav() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <header
+      className={`fixed inset-x-0 top-0 z-40 transition-all ${
+        scrolled ? "bg-[#F4F4F2]/90 backdrop-blur-md border-b border-[#D1D1CB]" : "bg-transparent"
+      }`}
+    >
+      <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-5 md:px-10">
+        <a href="#hero" className="mono font-medium text-carbon">PP</a>
+        <svg width="28" height="28" viewBox="0 0 28 28" className="hidden md:block" aria-hidden>
+          <line x1="14" y1="2" x2="14" y2="26" stroke="#1A4BFF" strokeWidth="1" />
+          <line x1="2" y1="14" x2="26" y2="14" stroke="#1A4BFF" strokeWidth="1" />
+        </svg>
+        <nav className="hidden items-center gap-8 md:flex">
+          {NAV.map((n) => (
+            <a key={n.id} href={`#${n.id}`} className="mono text-[11px] hover:text-cobalt transition-colors">
+              {n.label}
+            </a>
+          ))}
+        </nav>
+        <a
+          href="#contact"
+          className="mono text-[11px] md:hidden"
+        >
+          Menu
+        </a>
+      </div>
+    </header>
+  );
+}
+
+/* ---------- Hero ---------- */
+
+function Hero() {
+  return (
+    <section id="hero" className="relative min-h-screen px-6 pt-32 pb-20 md:px-10 md:pt-40">
       <div
-        className="flex min-h-[140px] flex-col justify-between p-4"
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
         style={{
-          backgroundColor: cert.color,
-          boxShadow: "0 12px 24px -14px rgba(0,0,0,.3)",
+          backgroundImage:
+            "linear-gradient(#0F1115 1px, transparent 1px), linear-gradient(90deg, #0F1115 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
         }}
-      >
-        <p className="font-[family-name:var(--font-hand)] text-xl font-bold leading-tight" style={{ color: "var(--color-ink)" }}>
-          {cert.name}
-        </p>
-        <div className="mt-4 flex items-end justify-between">
-          <p className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest" style={{ color: "var(--color-ink)", opacity: 0.7 }}>
-            {cert.issuer}
-          </p>
-          {/* stamp */}
-          <div className="rounded-full border-2 border-dashed px-2 py-0.5 font-[family-name:var(--font-hand)] text-xs" style={{ borderColor: "var(--color-margin-line)", color: "var(--color-margin-line)" }}>
-            certified
+      />
+      <div className="relative mx-auto max-w-[1400px]">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mono flex flex-wrap items-center gap-3 text-cobalt text-[11px]"
+        >
+          <span>PIYUSH_PRASAD.v2026</span>
+          <span className="text-[#D1D1CB]">—</span>
+          <span>NAVI MUMBAI, INDIA</span>
+          <span className="text-[#D1D1CB]">—</span>
+          <span className="inline-flex items-center gap-2">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cobalt opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cobalt" />
+            </span>
+            AVAILABLE FOR OPPORTUNITIES
+          </span>
+        </motion.div>
+
+        <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-10">
+          <div className="lg:col-span-8">
+            <motion.h1
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+              className="display text-[64px] leading-[0.88] md:text-[96px] lg:text-[128px]"
+            >
+              <span className="block">PIYUSH</span>
+              <span className="block text-cobalt">PRASAD</span>
+            </motion.h1>
+
+            <motion.p
+              variants={fadeUp}
+              initial="hidden"
+              animate="show"
+              transition={{ delay: 0.9 }}
+              className="mono mt-8 text-[12px]"
+            >
+              CLOUD &amp; DEVOPS ENGINEER
+            </motion.p>
+            <motion.p
+              variants={fadeUp}
+              initial="hidden"
+              animate="show"
+              transition={{ delay: 1.05 }}
+              className="mt-4 max-w-xl text-[17px] text-carbon/80"
+            >
+              Building scalable, secure, and observable infrastructure systems. Bridging ITSM and DevSecOps — from ticket queues to production pipelines.
+            </motion.p>
+          </div>
+
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            transition={{ delay: 1.2 }}
+            className="lg:col-span-4 lg:pt-24"
+          >
+            <ul className="mono space-y-3 text-[12px]">
+              <li>
+                <a href={`mailto:${EMAIL}`} className="group inline-flex items-center gap-2 hover:text-cobalt">
+                  <ArrowUpRight className="h-3.5 w-3.5 text-cobalt transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  {EMAIL}
+                </a>
+              </li>
+              <li>
+                <a href={LINKEDIN} target="_blank" rel="noreferrer" className="group inline-flex items-center gap-2 hover:text-cobalt">
+                  <ArrowUpRight className="h-3.5 w-3.5 text-cobalt transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  linkedin.com/in/ppiyushhhh
+                </a>
+              </li>
+              <li>
+                <a href={GITHUB} target="_blank" rel="noreferrer" className="group inline-flex items-center gap-2 hover:text-cobalt">
+                  <ArrowUpRight className="h-3.5 w-3.5 text-cobalt transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  github.com/{GH_USER}
+                </a>
+              </li>
+            </ul>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.6, duration: 0.8 }}
+          className="mono mt-24 flex items-center gap-4 text-[11px] text-carbon/60"
+        >
+          <span className="h-px w-16 bg-carbon/40" />
+          <span>SCROLL TO EXPLORE</span>
+          <ChevronDown className="h-3.5 w-3.5" />
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Section header ---------- */
+
+function SectionLabel({ n, label, dark = false }: { n: string; label: string; dark?: boolean }) {
+  return (
+    <div className={`mono mb-16 flex items-center gap-4 text-[11px] ${dark ? "text-white/60" : "text-carbon/70"}`}>
+      <span className="text-cobalt">{n}</span>
+      <span>/ {label}</span>
+      <span className={`ml-4 h-px flex-1 ${dark ? "bg-white/20" : "bg-[#D1D1CB]"}`} />
+    </div>
+  );
+}
+
+/* ---------- Projects ---------- */
+
+function Projects() {
+  return (
+    <section id="projects" className="relative px-6 py-24 md:px-10 md:py-32">
+      <div className="mx-auto max-w-[1400px]">
+        <SectionLabel n="001" label="SELECTED WORK" />
+        <ul>
+          {PROJECTS.map((p, i) => (
+            <motion.li
+              key={p.idx}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-80px" }}
+              className={`group relative grid grid-cols-1 gap-6 border-t border-[#D1D1CB] py-12 lg:grid-cols-12 lg:gap-10 lg:py-16 ${
+                i === PROJECTS.length - 1 ? "border-b" : ""
+              }`}
+            >
+              <div className="mono text-cobalt text-[12px] lg:col-span-1">{p.idx}</div>
+              <div className="lg:col-span-6">
+                <h3 className="display text-[40px] leading-[0.9] transition-colors group-hover:text-cobalt md:text-[64px] lg:text-[80px]">
+                  {p.title}
+                </h3>
+                <p className="mono mt-4 text-cobalt text-[11px]">{p.subtitle}</p>
+              </div>
+              <div className="lg:col-span-5">
+                <p className="mono text-[11px] text-carbon/60">{p.year}</p>
+                <p className="mt-4 text-carbon/85">{p.body}</p>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {p.tech.map((t) => (
+                    <span
+                      key={t}
+                      className="mono border border-[#D1D1CB] px-2.5 py-1 text-[10px] text-carbon/80"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                {p.link && (
+                  <a
+                    href={p.link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mono mt-6 inline-flex items-center gap-2 text-cobalt text-[11px] hover:underline"
+                  >
+                    <ArrowUpRight className="h-4 w-4" /> {p.link.label}
+                  </a>
+                )}
+              </div>
+            </motion.li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Experience ---------- */
+
+function Experience() {
+  const [active, setActive] = useState(0);
+  const job = EXPERIENCE[active];
+  return (
+    <section id="experience" className="relative bg-carbon px-6 py-24 text-white md:px-10 md:py-32">
+      <div className="mx-auto max-w-[1400px]">
+        <SectionLabel n="002" label="EXPERIENCE" dark />
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
+          <div className="lg:col-span-4">
+            <h2 className="display text-[56px] leading-[0.88] md:text-[80px]">
+              WORK
+              <br />
+              <span className="text-cobalt">HISTORY</span>
+            </h2>
+            <ul className="mt-10 space-y-1">
+              {EXPERIENCE.map((e, i) => {
+                const isActive = i === active;
+                return (
+                  <li key={e.company}>
+                    <button
+                      onClick={() => setActive(i)}
+                      className={`w-full border-l-2 py-4 pl-5 text-left transition-colors ${
+                        isActive
+                          ? "border-cobalt bg-white/[0.04]"
+                          : "border-white/10 hover:border-white/40"
+                      }`}
+                    >
+                      <div className={`mono text-[12px] ${isActive ? "text-cobalt" : "text-white"}`}>
+                        {e.company.toUpperCase()}
+                      </div>
+                      <div className="mono mt-1 text-[10px] text-white/50">{e.period}</div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <motion.div
+            key={active}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="lg:col-span-8"
+          >
+            <span className="mono inline-block border border-cobalt px-3 py-1 text-cobalt text-[10px]">
+              {job.type}
+            </span>
+            <h3 className="display mt-6 text-[40px] leading-[0.95] md:text-[56px]">{job.role.toUpperCase()}</h3>
+            <p className="mono mt-3 text-cobalt text-[11px]">{job.period}</p>
+            <ul className="mt-10 space-y-6">
+              {job.bullets.map((b, i) => (
+                <li key={i} className="flex gap-4">
+                  <span className="mono mt-1 text-cobalt text-[11px]">→</span>
+                  <span className="text-white/85">{b}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Skills ---------- */
+
+function Skills() {
+  const [toggle, setToggle] = useState(false);
+  const [util, setUtil] = useState(65);
+  const [pressed, setPressed] = useState<string | null>(null);
+  const press = (id: string) => {
+    setPressed(id);
+    setTimeout(() => setPressed(null), 300);
+  };
+  return (
+    <section id="skills" className="relative px-6 py-24 md:px-10 md:py-32">
+      <div className="mx-auto max-w-[1400px]">
+        <SectionLabel n="003" label="THE STACK" />
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
+          <div className="lg:col-span-4">
+            <h2 className="display text-[56px] leading-[0.88] md:text-[80px]">
+              THE
+              <br />
+              <span className="text-cobalt">STACK</span>
+            </h2>
+            <p className="mt-6 max-w-sm text-carbon/70">
+              A live component library. Interact with the elements below — these reflect real design + engineering proficiency.
+            </p>
+
+            <div className="mt-10 border border-[#D1D1CB] bg-white/60 p-6">
+              <div className="mono mb-5 text-[10px] text-carbon/60">INTERACTIVE COMPONENTS</div>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { id: "aws", cmd: "$ aws deploy" },
+                  { id: "nginx", cmd: "$ nginx -t" },
+                  { id: "sys", cmd: "$ systemctl" },
+                ].map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => press(c.id)}
+                    className={`mono border px-3 py-2 text-[11px] transition-all ${
+                      pressed === c.id
+                        ? "border-cobalt bg-cobalt text-white scale-[0.97]"
+                        : "border-cobalt text-cobalt hover:bg-cobalt hover:text-white"
+                    }`}
+                  >
+                    {c.cmd}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 flex items-center gap-3">
+                <button
+                  onClick={() => setToggle((t) => !t)}
+                  aria-pressed={toggle}
+                  className={`relative h-6 w-11 rounded-full border transition-colors ${
+                    toggle ? "border-cobalt bg-cobalt" : "border-[#D1D1CB] bg-[#EAEAE4]"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
+                      toggle ? "left-6" : "left-0.5"
+                    }`}
+                  />
+                </button>
+                <span className="mono text-[10px] text-carbon/70">{toggle ? "ACTIVE" : "IDLE"}</span>
+              </div>
+
+              <div className="mt-6">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={util}
+                  onChange={(e) => setUtil(Number(e.target.value))}
+                  className="w-full accent-[#1A4BFF]"
+                />
+                <div className="mono mt-2 text-[10px] text-carbon/70">
+                  UTILIZATION: <span className="text-cobalt">{util}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-8">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {SKILL_CATS.map((cat) => (
+                <motion.div
+                  key={cat.label}
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, margin: "-40px" }}
+                  className="border border-[#D1D1CB] bg-white/50 p-6"
+                >
+                  <div className="mono mb-4 flex items-center gap-2 text-[10px] text-carbon/70">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cobalt" />
+                    {cat.label.toUpperCase()}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {cat.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="mono border border-[#D1D1CB] bg-white px-2.5 py-1 text-[10px] text-carbon/80"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </motion.div>
+    </section>
   );
 }
 
-/* ---------------- Contact ---------------- */
+/* ---------- Certifications & Education ---------- */
 
-function ContactPage() {
+function Certifications() {
   return (
-    <NotebookPage pageNum="06" chapterLabel="Chapter 06 · Contact">
-      <div className="text-center">
-        <h2 className="font-[family-name:var(--font-hand)] text-6xl font-bold leading-tight" style={{ color: "var(--color-ink)" }}>
-          Thanks for reading.
-        </h2>
-        <p className="mt-3 font-[family-name:var(--font-hand-alt)] text-2xl" style={{ color: "var(--color-accent)" }}>
-          Let's build something together.
-        </p>
+    <section id="certifications" className="relative px-6 py-24 md:px-10 md:py-32">
+      <div className="mx-auto max-w-[1400px]">
+        <SectionLabel n="004" label="CERTIFICATIONS & EDUCATION" />
+        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
+          <div className="lg:col-span-7">
+            <h2 className="display text-[48px] leading-[0.9] md:text-[72px]">CREDENTIALS</h2>
+            <ul className="mt-10 divide-y divide-[#D1D1CB] border-t border-b border-[#D1D1CB]">
+              {CERTS.map((c) => (
+                <motion.li
+                  key={c.name}
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true }}
+                  className="flex items-center gap-5 py-5"
+                >
+                  <div className="mono flex h-10 w-10 flex-shrink-0 items-center justify-center border border-[#D1D1CB] text-cobalt text-[10px]">
+                    {c.issuer.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="font-medium">{c.name}</div>
+                    <div className="mono mt-1 text-cobalt text-[10px]">{c.issuer}</div>
+                  </div>
+                </motion.li>
+              ))}
+            </ul>
+          </div>
+          <div className="lg:col-span-5">
+            <h2 className="display text-[48px] leading-[0.9] md:text-[72px]">EDUCATION</h2>
+            <div className="mt-10 space-y-4">
+              {EDUCATION.map((e) => (
+                <motion.div
+                  key={e.degree}
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true }}
+                  className="border border-[#D1D1CB] bg-white/50 p-5"
+                >
+                  <div className="mono text-cobalt text-[10px]">{e.period}</div>
+                  <div className="mt-3 font-semibold">{e.degree}</div>
+                  <div className="mt-1 text-sm text-carbon/80">{e.school}</div>
+                  <div className="mono mt-2 text-[10px] text-carbon/60">{e.extra}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div className="mx-auto mt-12 grid max-w-xl gap-4 sm:grid-cols-2">
-        <ContactLink Icon={Mail} label="Email" value="piyush.piyushprasad.in" href="mailto:piyush.piyushprasad.in" />
-        <ContactLink Icon={Linkedin} label="LinkedIn" value="linkedin.com/in/ppiyushhhh" href="https://linkedin.com/in/ppiyushhhh" />
-        <ContactLink Icon={Github} label="GitHub" value="github.com/ppiyushhhhh" href="https://github.com/ppiyushhhhh" />
-        <ContactLink Icon={FileDown} label="Resume" value="Download PDF" href="#" />
-      </div>
-
-      <div className="mt-16 text-center">
-        <p className="font-[family-name:var(--font-hand-alt)] text-lg" style={{ color: "var(--color-ink)", opacity: 0.7 }}>
-          — signed —
-        </p>
-        <Signature />
-        <p className="mt-4 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.3em]" style={{ color: "var(--color-accent)" }}>
-          Mumbai · India
-        </p>
-      </div>
-    </NotebookPage>
+    </section>
   );
 }
 
-function ContactLink({
-  Icon,
-  label,
-  value,
-  href,
-}: {
-  Icon: React.ComponentType<{ size?: number }>;
-  label: string;
-  value: string;
-  href: string;
-}) {
+/* ---------- GitHub Activity ---------- */
+
+type Repo = {
+  id: number;
+  name: string;
+  html_url: string;
+  description: string | null;
+  language: string | null;
+  pushed_at: string;
+  fork: boolean;
+};
+type Commit = { sha: string; commit: { message: string; author: { date: string } } };
+
+async function fetchRepos(): Promise<Repo[]> {
+  const r = await fetch(`https://api.github.com/users/${GH_USER}/repos?sort=pushed&per_page=6`);
+  if (!r.ok) throw new Error(r.status === 403 ? "GitHub rate limit reached." : `GitHub API error ${r.status}`);
+  const data = (await r.json()) as Repo[];
+  return data.filter((r) => !r.fork).slice(0, 6);
+}
+
+async function fetchLatestCommit(repo: string): Promise<Commit | null> {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GH_USER}/${repo}/commits?per_page=1`);
+    if (!r.ok) return null;
+    const data = (await r.json()) as Commit[];
+    return data[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function relTime(iso: string) {
+  const d = new Date(iso).getTime();
+  const diff = Date.now() - d;
+  const day = 86400000;
+  if (diff < day) return "today";
+  if (diff < day * 2) return "yesterday";
+  if (diff < day * 30) return `${Math.floor(diff / day)}d ago`;
+  if (diff < day * 365) return `${Math.floor(diff / (day * 30))}mo ago`;
+  return `${Math.floor(diff / (day * 365))}y ago`;
+}
+
+function RepoCard({ repo }: { repo: Repo }) {
+  const { data: commit } = useQuery({
+    queryKey: ["commit", repo.name],
+    queryFn: () => fetchLatestCommit(repo.name),
+    staleTime: 5 * 60_000,
+  });
   return (
     <a
-      href={href}
-      target={href.startsWith("http") ? "_blank" : undefined}
+      href={repo.html_url}
+      target="_blank"
       rel="noreferrer"
-      className="group flex items-center gap-3 rounded-sm px-4 py-3 transition-all hover:-translate-y-0.5"
-      style={{ border: "1.5px dashed var(--color-ink)", backgroundColor: "rgba(255,255,255,0.3)" }}
+      className="group flex flex-col border border-[#D1D1CB] bg-white/50 p-6 transition-colors hover:border-cobalt"
     >
-      <span className="grid h-9 w-9 place-items-center rounded-full" style={{ backgroundColor: "var(--color-paper)", border: "1.5px solid var(--color-ink)", color: "var(--color-ink)" }}>
-        <Icon size={16} />
-      </span>
-      <span>
-        <span className="block font-[family-name:var(--font-nav)] text-[10px] uppercase tracking-widest" style={{ color: "var(--color-accent)" }}>{label}</span>
-        <span className="block font-[family-name:var(--font-hand-alt)] text-lg" style={{ color: "var(--color-ink)" }}>{value}</span>
-      </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="mono text-[13px] font-medium group-hover:text-cobalt">{repo.name}</div>
+        <ArrowUpRight className="h-4 w-4 text-carbon/40 transition-all group-hover:text-cobalt group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+      </div>
+      {repo.language && (
+        <div className="mono mt-3 flex items-center gap-2 text-[10px] text-carbon/70">
+          <span className="h-1.5 w-1.5 rounded-full bg-cobalt" />
+          {repo.language}
+        </div>
+      )}
+      {repo.description && (
+        <p className="mt-3 text-sm text-carbon/80">{repo.description}</p>
+      )}
+      <div className="mt-auto pt-6">
+        <div className="mono text-[10px] text-carbon/60">LATEST COMMIT</div>
+        {commit ? (
+          <>
+            <div className="mt-2 line-clamp-2 text-sm text-carbon/85">{commit.commit.message.split("\n")[0]}</div>
+            <div className="mono mt-2 flex items-center gap-3 text-[10px] text-carbon/60">
+              <span className="text-cobalt">{commit.sha.slice(0, 7)}</span>
+              <span>{relTime(commit.commit.author.date)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="mono mt-2 text-[10px] text-carbon/50">
+            {relTime(repo.pushed_at)} · pushed
+          </div>
+        )}
+      </div>
     </a>
   );
 }
 
-function Signature() {
-  const ref = useRef<SVGSVGElement | null>(null);
-  const inView = useInView(ref, { once: true });
+function GithubActivity() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["repos", GH_USER],
+    queryFn: fetchRepos,
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
   return (
-    <svg ref={ref} viewBox="0 0 300 90" className="mx-auto mt-2 h-24 w-64" style={{ color: "var(--color-ink)" }}>
-      <motion.path
-        d="M 20 60 C 35 20, 60 20, 70 55 C 78 78, 95 40, 105 55 C 115 68, 128 30, 138 55 L 148 55 M 158 30 L 158 65 M 168 45 C 180 30, 195 30, 200 50 C 205 68, 218 40, 228 55 C 240 70, 260 50, 275 45"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        initial={{ pathLength: 0 }}
-        animate={inView ? { pathLength: 1 } : {}}
-        transition={{ duration: 2.2, ease: "easeInOut" }}
-      />
-    </svg>
+    <section id="github" className="relative px-6 py-24 md:px-10 md:py-32">
+      <div className="mx-auto max-w-[1400px]">
+        <SectionLabel n="005" label="GITHUB ACTIVITY" />
+        <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
+          <h2 className="display text-[48px] leading-[0.9] md:text-[72px]">
+            LIVE
+            <br />
+            <span className="text-cobalt">COMMITS</span>
+          </h2>
+          <a
+            href={GITHUB}
+            target="_blank"
+            rel="noreferrer"
+            className="mono inline-flex items-center gap-2 border border-[#D1D1CB] px-4 py-2 text-[11px] hover:border-cobalt hover:text-cobalt"
+          >
+            <Github className="h-3.5 w-3.5" />
+            @{GH_USER}
+          </a>
+        </div>
+        {isLoading && (
+          <div className="mono flex items-center gap-3 text-[11px] text-carbon/60">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Fetching repositories…
+          </div>
+        )}
+        {error && (
+          <div className="mono border border-[#D1D1CB] p-6 text-[11px] text-carbon/70">
+            {(error as Error).message} — try again later or view directly on GitHub.
+          </div>
+        )}
+        {data && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {data.map((r) => (
+              <RepoCard key={r.id} repo={r} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
-/* ---------------- Backdrop ---------------- */
+/* ---------- Contact ---------- */
 
-function DeskBackdrop() {
+function Contact() {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(EMAIL);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // no-op
+    }
+  };
   return (
-    <>
-      {/* coffee ring */}
-      <svg
-        className="pointer-events-none fixed bottom-8 right-6 z-0 opacity-40"
-        width="140"
-        height="140"
-        viewBox="0 0 140 140"
-        aria-hidden
+    <section id="contact" className="relative bg-carbon px-6 py-24 text-white md:px-10 md:py-32">
+      <div className="mx-auto max-w-[1400px]">
+        <SectionLabel n="006" label="CONTACT" dark />
+        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
+          <div className="lg:col-span-7">
+            <h2 className="display text-[64px] leading-[0.88] md:text-[112px] lg:text-[128px]">
+              LET&apos;S
+              <br />
+              <span className="text-cobalt">BUILD</span>
+              <br />
+              TOGETHER
+            </h2>
+          </div>
+          <div className="lg:col-span-5">
+            <p className="text-white/70">
+              Open to Cloud, DevOps, and DevSecOps opportunities. Let&apos;s connect and build something scalable, secure, and observable.
+            </p>
+
+            <div className="mt-10 space-y-6">
+              <div>
+                <div className="mono text-cobalt text-[10px]">EMAIL</div>
+                <div className="mt-2 flex flex-wrap items-center gap-4">
+                  <a href={`mailto:${EMAIL}`} className="text-[18px] hover:text-cobalt">
+                    {EMAIL}
+                  </a>
+                  <button
+                    onClick={copy}
+                    className="mono inline-flex items-center gap-1.5 border border-white/20 px-2.5 py-1 text-[10px] transition-colors hover:border-cobalt hover:text-cobalt"
+                  >
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {copied ? "COPIED" : "COPY"}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="mono text-cobalt text-[10px]">PHONE</div>
+                <a href={`tel:${PHONE.replace(/\s/g, "")}`} className="mt-2 block text-[18px] hover:text-cobalt">
+                  {PHONE}
+                </a>
+              </div>
+
+              <a
+                href={LINKEDIN}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center justify-between border-b border-white/20 py-4 hover:border-cobalt"
+              >
+                <span className="inline-flex items-center gap-3 text-[16px]">
+                  <Linkedin className="h-4 w-4 text-cobalt" />
+                  LinkedIn
+                </span>
+                <ArrowUpRight className="h-5 w-5 text-cobalt transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              </a>
+              <a
+                href={GITHUB}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center justify-between border-b border-white/20 py-4 hover:border-cobalt"
+              >
+                <span className="inline-flex items-center gap-3 text-[16px]">
+                  <Github className="h-4 w-4 text-cobalt" />
+                  GitHub
+                </span>
+                <ArrowUpRight className="h-5 w-5 text-cobalt transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              </a>
+            </div>
+          </div>
+        </div>
+        <div className="mono mt-24 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-8 text-[10px] text-white/50">
+          <span>© 2026 PIYUSH PRASAD — ALL RIGHTS RESERVED</span>
+          <span>NAVI MUMBAI · IN</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- CV Dock ---------- */
+
+function CvDock() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      className="fixed bottom-6 right-6 z-30 hidden sm:block"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <motion.div
+        initial={false}
+        animate={{ opacity: open ? 1 : 0, y: open ? 0 : 10, pointerEvents: open ? "auto" : "none" }}
+        transition={{ duration: 0.2 }}
+        className="mb-3 w-64 border border-[#D1D1CB] bg-white p-4 shadow-lg"
       >
-        <circle cx="70" cy="70" r="52" fill="none" stroke="#B08968" strokeWidth="4" opacity="0.5" />
-        <circle cx="70" cy="70" r="48" fill="none" stroke="#8B6F4E" strokeWidth="1.5" opacity="0.4" strokeDasharray="6 8" />
-      </svg>
-      {/* corner pencil doodle */}
-      <svg className="pointer-events-none fixed left-4 top-20 z-0 opacity-30 hidden md:block" width="80" height="80" viewBox="0 0 80 80" aria-hidden style={{ color: "var(--color-accent)" }}>
-        <path d="M10 60 L 30 20 L 50 60 M 20 45 L 40 45" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        <text x="55" y="60" fontFamily="Patrick Hand" fontSize="14" fill="currentColor">Δ</text>
-      </svg>
-    </>
+        <div className="mono text-[10px] text-carbon/60">RESUME · 2026</div>
+        <div className="display mt-2 text-[22px] leading-[0.95]">
+          PIYUSH<br /><span className="text-cobalt">PRASAD</span>
+        </div>
+        <div className="mono mt-3 text-[9px] text-carbon/70">CLOUD &amp; DEVOPS ENGINEER</div>
+        <div className="mt-3 border-t border-[#D1D1CB] pt-3 text-[11px] text-carbon/70">
+          Click to download the full PDF.
+        </div>
+      </motion.div>
+      <a
+        href="/resume.pdf"
+        download
+        className="mono inline-flex items-center gap-2 bg-carbon px-4 py-3 text-white text-[11px] shadow-lg hover:bg-cobalt"
+      >
+        <Download className="h-3.5 w-3.5" />
+        DOWNLOAD CV
+      </a>
+    </div>
+  );
+}
+
+/* ---------- Page ---------- */
+
+function PortfolioPage() {
+  return (
+    <div className="relative min-h-screen bg-stone text-carbon">
+      <BlueprintGrid />
+      <TopNav />
+      <main className="relative z-10">
+        <Hero />
+        <Projects />
+        <Experience />
+        <Skills />
+        <Certifications />
+        <GithubActivity />
+        <Contact />
+      </main>
+      <CvDock />
+    </div>
   );
 }
