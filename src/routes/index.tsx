@@ -785,8 +785,6 @@ function RepoCard({ repo }: { repo: Repo }) {
 }
 
 function GithubActivity() {
-  const initialCache =
-    typeof window !== "undefined" ? lsRead<Repo[]>("repos") : null;
   const { data, isLoading, error, isFetching, dataUpdatedAt } = useQuery({
     queryKey: ["repos", GH_USER],
     queryFn: fetchRepos,
@@ -794,9 +792,8 @@ function GithubActivity() {
     gcTime: CACHE_MAX_AGE,
     retry: 1,
     refetchOnWindowFocus: false,
-    initialData: initialCache?.v,
-    initialDataUpdatedAt: initialCache?.t,
   });
+
   const showError = !!error && !data;
   const showStaleNotice = !!error && !!data;
   return (
