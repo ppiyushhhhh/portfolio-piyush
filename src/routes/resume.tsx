@@ -16,11 +16,11 @@ function ResumeViewer() {
       className="fixed inset-0 bg-[#1a1a1a] flex flex-col"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <header className="flex items-center justify-between px-6 py-3 bg-black text-white border-b border-white/10">
-        <div className="font-mono text-[11px] tracking-widest uppercase">
+      <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-black px-4 py-3 text-white sm:px-6">
+        <div className="min-w-0 truncate font-mono text-[10px] uppercase tracking-widest sm:text-[11px]">
           Piyush Prasad · Resume
         </div>
-        <div className="font-mono text-[10px] tracking-wider uppercase text-white/50">
+        <div className="shrink-0 font-mono text-[9px] uppercase tracking-wider text-white/50 sm:text-[10px]">
           View Only
         </div>
       </header>
