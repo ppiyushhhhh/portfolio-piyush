@@ -37,15 +37,15 @@ const {
   SMTP_PORT,
   SMTP_USER,
   SMTP_PASS,
-  REPORT_TO,
+  REPORT_TO = "hello@piyushprasad.in",
   REPORT_FROM,
+  ALERT_TO,
   SKIP_EMAIL,
 } = process.env;
 
-if (!DD_API_KEY || !DD_APP_KEY) {
-  console.error("Missing DD_API_KEY / DD_APP_KEY");
-  process.exit(1);
-}
+const SITE_URL = `https://${SITE_DOMAIN}`;
+const BRAND = "Piyush Prasad";
+const BRAND_TAGLINE = "Automated Website Health Monitoring";
 
 const DD_BASE = `https://api.${DD_SITE}/api`;
 const NOW = Math.floor(Date.now() / 1000);
