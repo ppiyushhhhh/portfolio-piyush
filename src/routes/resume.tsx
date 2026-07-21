@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/resume")({
   head: () => ({
@@ -7,12 +7,31 @@ export const Route = createFileRoute("/resume")({
       { title: "Resume — Piyush Prasad" },
       { name: "robots", content: "noindex" },
     ],
+    links: [
+      // Kick off the PDF fetch in parallel with the JS bundle so the viewer
+      // has bytes ready the moment it mounts.
+      {
+        rel: "preload",
+        as: "fetch",
+        href: "/resume.pdf",
+        type: "application/pdf",
+        crossOrigin: "anonymous",
+      },
+    ],
   }),
   component: ResumeViewer,
 });
 
 function ResumeViewer() {
   const [loaded, setLoaded] = useState(false);
+
+  // Safety net: some browsers (Firefox, mobile Safari) don't reliably fire
+  // `onLoad` on <object>/<iframe> when rendering a PDF via the built-in
+  // viewer, so the spinner could hang forever. Hide it after a short window.
+  useEffect(() => {
+    const t = setTimeout(() => setLoaded(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <div
