@@ -1047,7 +1047,7 @@ function CvDock() {
           Preview inline in a new tab.
         </div>
       </motion.div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
         <a
           href="/resume.pdf#toolbar=0&navpanes=0"
           target="_blank"
