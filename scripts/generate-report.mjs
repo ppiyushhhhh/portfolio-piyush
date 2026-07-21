@@ -522,39 +522,108 @@ function drawSparkline(doc, values, x, y, w, h) {
 }
 
 // -------- Email --------
-async function sendEmail(pdfPath, data) {
-  if (SKIP_EMAIL === "1" || !SMTP_HOST || !SMTP_USER || !SMTP_PASS || !REPORT_TO) {
-    console.log("Skipping email (SMTP env not set or SKIP_EMAIL=1).");
-    return;
-  }
-  const transporter = nodemailer.createTransport({
+function makeTransport() {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
+  const port = Number(SMTP_PORT || 465);
+  return nodemailer.createTransport({
     host: SMTP_HOST,
-    port: Number(SMTP_PORT || 465),
-    secure: Number(SMTP_PORT || 465) === 465,
+    port,
+    secure: port === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
-  const date = data.generatedAt.toISOString().slice(0, 10);
+}
+
+function formatDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+async function sendReportEmail(pdfPath, data) {
+  if (SKIP_EMAIL === "1") {
+    console.log("SKIP_EMAIL=1, not sending.");
+    return;
+  }
+  const transporter = makeTransport();
+  if (!transporter) {
+    console.log("SMTP env not configured; skipping email.");
+    return;
+  }
+  const date = formatDate(data.generatedAt);
+  const body = [
+    "Hello Piyush,",
+    "",
+    `Please find attached today's Website Health Report for ${SITE_URL}.`,
+    "",
+    "This report contains uptime, response time, SSL status, homepage availability, visitor analytics, and overall website health.",
+    "",
+    `Overall Health Score: ${data.healthScore.value}/100 (${data.healthScore.grade})`,
+    "",
+    "Regards,",
+    "Automated Monitoring System",
+  ].join("\n");
+
   await transporter.sendMail({
     from: REPORT_FROM || SMTP_USER,
     to: REPORT_TO,
-    subject: `Daily Website Health Report — ${data.domain} — ${date}`,
-    text: buildSummary(data),
+    subject: `Daily Website Health Report - ${date}`,
+    text: body,
     attachments: [{ filename: path.basename(pdfPath), path: pdfPath }],
   });
-  console.log(`Email sent to ${REPORT_TO}`);
+  console.log(`Report emailed to ${REPORT_TO}`);
+}
+
+async function sendFailureAlert(err) {
+  if (SKIP_EMAIL === "1") return;
+  const transporter = makeTransport();
+  if (!transporter) {
+    console.error("Cannot send failure alert: SMTP env not configured.");
+    return;
+  }
+  const date = formatDate(new Date());
+  const alertTo = ALERT_TO || REPORT_TO;
+  const body = [
+    "Hello Piyush,",
+    "",
+    `The automated Daily Website Health Report for ${SITE_URL} FAILED to generate or deliver on ${date}.`,
+    "",
+    "Failure details:",
+    "----------------",
+    String(err?.stack || err?.message || err),
+    "",
+    "Please review the GitHub Actions run logs for the full trace.",
+    "",
+    "Regards,",
+    "Automated Monitoring System",
+  ].join("\n");
+  try {
+    await transporter.sendMail({
+      from: REPORT_FROM || SMTP_USER,
+      to: alertTo,
+      subject: `[ALERT] Daily Website Health Report FAILED - ${date}`,
+      text: body,
+    });
+    console.error(`Failure alert sent to ${alertTo}`);
+  } catch (e) {
+    console.error("Failed to send failure alert:", e);
+  }
 }
 
 // -------- Main --------
-(async () => {
+async function main() {
+  if (!DD_API_KEY || !DD_APP_KEY) {
+    throw new Error("Missing DD_API_KEY / DD_APP_KEY environment variables");
+  }
   const data = await collect();
-  const date = data.generatedAt.toISOString().slice(0, 10);
+  const date = formatDate(data.generatedAt);
   const outDir = path.join(__dirname, "..", "reports");
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, `Daily-Website-Report-${date}.pdf`);
   await renderPDF(data, outPath);
   console.log(`PDF written: ${outPath}`);
-  await sendEmail(outPath, data);
-})().catch((err) => {
+  await sendReportEmail(outPath, data);
+}
+
+main().catch(async (err) => {
   console.error(err);
+  await sendFailureAlert(err);
   process.exit(1);
 });
