@@ -267,22 +267,43 @@ function renderPDF(data, outPath) {
     const stream = fs.createWriteStream(outPath);
     doc.pipe(stream);
 
-    // Header band
-    doc.rect(0, 0, doc.page.width, 90).fill(COLORS.navy);
+    // ---- Header band with brand monogram ----
+    doc.rect(0, 0, doc.page.width, 110).fill(COLORS.navy);
+    // Monogram badge
+    doc.circle(85, 55, 26).fill(COLORS.cobalt);
     doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20)
-      .text("Daily Website Health Report", 50, 30);
-    doc.font("Helvetica").fontSize(11).fillColor("#C7D2FE")
-      .text(`${data.domain}  •  ${data.generatedAt.toUTCString()}`, 50, 58);
+      .text("PP", 65, 44, { width: 40, align: "center" });
+    // Title block
+    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20)
+      .text("Daily Website Health Report", 130, 32);
+    doc.font("Helvetica").fontSize(10).fillColor("#C7D2FE")
+      .text(`${BRAND} · ${BRAND_TAGLINE}`, 130, 58);
+    doc.font("Helvetica").fontSize(9).fillColor("#9CA8D6")
+      .text(`${SITE_URL}  ·  ${data.generatedAt.toUTCString()}`, 130, 74);
 
-    doc.moveDown(4);
     doc.fillColor(COLORS.ink);
 
-    // Meta table
-    const metaY = 110;
+    // ---- Health score hero card ----
+    const score = data.healthScore;
+    const scoreColor = score.value >= 90 ? COLORS.good : score.value >= 70 ? COLORS.warn : COLORS.bad;
+    doc.roundedRect(50, 130, doc.page.width - 100, 70, 6).fill(COLORS.bg);
+    doc.roundedRect(50, 130, 6, 70, 3).fill(scoreColor);
+    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9)
+      .text("OVERALL HEALTH SCORE", 70, 142);
+    doc.fillColor(scoreColor).font("Helvetica-Bold").fontSize(34)
+      .text(`${score.value}`, 70, 156, { continued: true })
+      .fillColor(COLORS.muted).fontSize(14).text("  / 100");
+    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11)
+      .text(score.grade, doc.page.width - 200, 148, { width: 140, align: "right" });
+    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9)
+      .text(score.summary, doc.page.width - 260, 168, { width: 200, align: "right" });
+
+    // ---- Meta table ----
+    const metaY = 215;
     const meta = [
-      ["Domain", data.domain],
+      ["Domain", SITE_URL],
       ["Hosting Provider", "Vercel"],
-      ["Monitoring Platform", "Datadog"],
+      ["Monitoring Platform", "Datadog (RUM + Synthetics)"],
       ["Report Generated", data.generatedAt.toISOString()],
     ];
     drawKvTable(doc, meta, 50, metaY, doc.page.width - 100);
