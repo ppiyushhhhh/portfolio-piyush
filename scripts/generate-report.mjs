@@ -47,6 +47,15 @@ const SITE_URL = `https://${SITE_DOMAIN}`;
 const BRAND = "Piyush Prasad";
 const BRAND_TAGLINE = "Automated Website Health Monitoring";
 
+const CONTACT = {
+  email: "piyush@piyushprasad.in",
+  phone: "+91 9324236673",
+  linkedin: "https://linkedin.com/in/ppiyushhhh",
+  linkedinLabel: "linkedin.com/in/ppiyushhhh",
+  github: "https://github.com/ppiyushhhhh",
+  githubLabel: "github.com/ppiyushhhhh",
+};
+
 const COLORS = {
   navy: "#0B1F3A",
   cobalt: "#1E4EE8",
@@ -370,7 +379,7 @@ function drawHeader(doc, data) {
   doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12)
     .text(BRAND, x + 52, y + 4);
   doc.fillColor(COLORS.cobalt).font("Helvetica").fontSize(9)
-    .text(data.url, x + 52, y + 20);
+    .text(data.url, x + 52, y + 20, { link: data.url, underline: true, width: w - 200 });
   doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
     .text(BRAND_TAGLINE, x + 52, y + 32);
 
@@ -391,6 +400,34 @@ function drawHeader(doc, data) {
 function drawFooter(doc, data, pageNum, total) {
   const y = PAGE.h - 28;
   const w = PAGE.w - MARGIN * 2;
+
+  // Contact row (clickable) above the footer rule
+  const cy = y - 18;
+  doc.font("Helvetica").fontSize(7.5);
+  const items = [
+    { label: CONTACT.email, href: `mailto:${CONTACT.email}` },
+    { label: CONTACT.phone, href: `tel:${CONTACT.phone.replace(/\s/g, "")}` },
+    { label: CONTACT.linkedinLabel, href: CONTACT.linkedin },
+    { label: CONTACT.githubLabel, href: CONTACT.github },
+  ];
+  const sep = "  ·  ";
+  const sepW = doc.widthOfString(sep);
+  const totalW = items.reduce((s, it) => s + doc.widthOfString(it.label), 0)
+    + sepW * (items.length - 1);
+  let cx = MARGIN + (w - totalW) / 2;
+  items.forEach((it, i) => {
+    const tw = doc.widthOfString(it.label);
+    doc.fillColor(COLORS.cobalt)
+      .text(it.label, cx, cy, { link: it.href, underline: true, width: tw + 2, lineBreak: false });
+    cx += tw;
+    if (i < items.length - 1) {
+      doc.fillColor(COLORS.muted)
+        .text(sep, cx, cy, { width: sepW + 2, lineBreak: false, link: null, underline: false });
+      cx += sepW;
+    }
+  });
+
+
   doc.strokeColor(COLORS.line).lineWidth(0.5)
     .moveTo(MARGIN, y - 6).lineTo(PAGE.w - MARGIN, y - 6).stroke();
   const repo = data.git?.repoUrl ? ` · ${data.git.repoUrl}` : "";
