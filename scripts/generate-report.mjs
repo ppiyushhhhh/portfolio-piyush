@@ -1,37 +1,37 @@
 #!/usr/bin/env node
 /**
- * Daily Website Health Report
- * ---------------------------
- * Pulls uptime, latency, SSL, RUM and error data from the Datadog API,
- * generates a corporate-style PDF, and emails it via SMTP.
+ * Daily Website Health Report — Datadog-free edition
+ * ---------------------------------------------------
+ * Collects uptime, HTTP status, response time, SSL, DNS, common asset
+ * availability (robots.txt / sitemap.xml / favicon), and Lighthouse audit
+ * scores for a site — then renders a professional PDF via PDFKit and emails
+ * it with Nodemailer.
  *
- * Required env vars:
- *   DD_API_KEY               Datadog API key
- *   DD_APP_KEY               Datadog Application key
- *   DD_SITE                  e.g. us5.datadoghq.com (default)
- *   DD_RUM_APPLICATION_ID    RUM application ID (optional, for RUM queries)
- *   SITE_DOMAIN              e.g. piyushprasad.in
- *   SMTP_HOST                e.g. smtp.gmail.com
- *   SMTP_PORT                e.g. 465
- *   SMTP_USER                sender email / SMTP username
- *   SMTP_PASS                SMTP password / app password
- *   REPORT_TO                recipient email address
- *   REPORT_FROM              (optional) from address, defaults to SMTP_USER
+ * Env vars:
+ *   SITE_DOMAIN   e.g. piyushprasad.in           (required)
+ *   SMTP_HOST     e.g. smtp.gmail.com            (required for email)
+ *   SMTP_PORT     e.g. 465                       (required for email)
+ *   SMTP_USER     SMTP username / sender         (required for email)
+ *   SMTP_PASS     SMTP password / app password   (required for email)
+ *   REPORT_TO     recipient email                (required for email)
+ *   REPORT_FROM   optional, defaults to SMTP_USER
+ *   ALERT_TO      optional, failure-alert email; falls back to REPORT_TO
+ *   SKIP_EMAIL=1  generate PDF only, do not send
  */
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import tls from "node:tls";
+import dns from "node:dns/promises";
 import { fileURLToPath } from "node:url";
+import { spawn } from "node:child_process";
 import PDFDocument from "pdfkit";
 import nodemailer from "nodemailer";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const {
-  DD_API_KEY,
-  DD_APP_KEY,
-  DD_SITE = "us5.datadoghq.com",
-  DD_RUM_APPLICATION_ID,
   SITE_DOMAIN = "piyushprasad.in",
   SMTP_HOST,
   SMTP_PORT,
@@ -47,396 +47,406 @@ const SITE_URL = `https://${SITE_DOMAIN}`;
 const BRAND = "Piyush Prasad";
 const BRAND_TAGLINE = "Automated Website Health Monitoring";
 
-const DD_BASE = `https://api.${DD_SITE}/api`;
-const NOW = Math.floor(Date.now() / 1000);
-const FROM = NOW - 24 * 60 * 60; // last 24h
-
-// -------- Colors / theme --------
 const COLORS = {
-  navy: "#0B1E3F",
-  cobalt: "#1A4BFF",
-  ink: "#111111",
-  muted: "#666666",
-  line: "#E5E7EB",
-  bg: "#F7F8FA",
-  good: "#0F9D58",
-  warn: "#F4B400",
-  bad: "#DB4437",
+  navy: "#0B1F3A",
+  cobalt: "#1E4EE8",
+  ink: "#0F172A",
+  muted: "#5B6472",
+  line: "#D8DEE7",
+  bg: "#F5F7FB",
+  good: "#16A34A",
+  warn: "#D97706",
+  bad: "#DC2626",
 };
 
-// -------- Datadog helpers --------
-async function dd(path, params = {}) {
-  const url = new URL(`${DD_BASE}${path}`);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const res = await fetch(url, {
-    headers: {
-      "DD-API-KEY": DD_API_KEY,
-      "DD-APPLICATION-KEY": DD_APP_KEY,
-      "Content-Type": "application/json",
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Datadog ${path} -> ${res.status}: ${text.slice(0, 300)}`);
-  }
-  return res.json();
-}
+// ============================================================
+// Collectors
+// ============================================================
 
-async function ddQueryMetric(query) {
+async function checkHttp(url) {
+  const start = Date.now();
   try {
-    const data = await dd("/v1/query", { from: FROM, to: NOW, query });
-    const series = data.series?.[0];
-    if (!series?.pointlist?.length) return null;
-    const values = series.pointlist.map((p) => p[1]).filter((v) => v != null);
-    if (!values.length) return null;
-    return {
-      values,
-      avg: values.reduce((a, b) => a + b, 0) / values.length,
-      min: Math.min(...values),
-      max: Math.max(...values),
-      last: values[values.length - 1],
-      series,
-    };
-  } catch (e) {
-    console.warn(`metric query failed: ${query} -> ${e.message}`);
-    return null;
-  }
-}
-
-async function ddRumQuery(query, aggregations = ["count"], groupBy = []) {
-  if (!DD_RUM_APPLICATION_ID) return null;
-  try {
-    const body = {
-      data: {
-        attributes: {
-          from: new Date(FROM * 1000).toISOString(),
-          to: new Date(NOW * 1000).toISOString(),
-          query: `@application.id:${DD_RUM_APPLICATION_ID} ${query}`.trim(),
-          compute: aggregations.map((a) => ({ aggregation: a })),
-          group_by: groupBy.map((g) => ({ facet: g, limit: 5, sort: { aggregation: "count", order: "desc" } })),
-        },
-        type: "aggregate_request",
-      },
-    };
-    const res = await fetch(`${DD_BASE}/v2/rum/analytics/aggregate`, {
-      method: "POST",
-      headers: {
-        "DD-API-KEY": DD_API_KEY,
-        "DD-APPLICATION-KEY": DD_APP_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: { "User-Agent": "PortfolioHealthBot/1.0" },
     });
-    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-    return await res.json();
-  } catch (e) {
-    console.warn(`RUM query failed: ${e.message}`);
-    return null;
+    return {
+      ok: res.ok,
+      status: res.status,
+      statusText: res.statusText,
+      responseTimeMs: Date.now() - start,
+      finalUrl: res.url,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      statusText: err.message || "Request failed",
+      responseTimeMs: Date.now() - start,
+      finalUrl: url,
+      error: err.message,
+    };
   }
 }
 
-// -------- Collect data --------
-async function collect() {
-  console.log("Fetching Datadog data...");
+async function checkAsset(url) {
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: { "User-Agent": "PortfolioHealthBot/1.0" },
+    });
+    return { url, ok: res.ok, status: res.status };
+  } catch (err) {
+    return { url, ok: false, status: 0, error: err.message };
+  }
+}
 
-  // Synthetic uptime / response time / SSL
-  const [uptime, respAvg, respMin, respMax, sslDays] = await Promise.all([
-    ddQueryMetric(`avg:synthetics.test_runs{status:success,type:api,subtype:http,url:*${SITE_DOMAIN}*}.as_count() / avg:synthetics.test_runs{type:api,subtype:http,url:*${SITE_DOMAIN}*}.as_count() * 100`),
-    ddQueryMetric(`avg:synthetics.http.response.time{url:*${SITE_DOMAIN}*}`),
-    ddQueryMetric(`min:synthetics.http.response.time{url:*${SITE_DOMAIN}*}`),
-    ddQueryMetric(`max:synthetics.http.response.time{url:*${SITE_DOMAIN}*}`),
-    ddQueryMetric(`min:synthetics.ssl.days_before_expiration{*}`),
+async function checkDns(hostname) {
+  try {
+    const [a, aaaa] = await Promise.all([
+      dns.resolve4(hostname).catch(() => []),
+      dns.resolve6(hostname).catch(() => []),
+    ]);
+    return { ok: a.length > 0 || aaaa.length > 0, a, aaaa };
+  } catch (err) {
+    return { ok: false, a: [], aaaa: [], error: err.message };
+  }
+}
+
+function checkSsl(hostname, port = 443) {
+  return new Promise((resolve) => {
+    const socket = tls.connect(
+      { host: hostname, port, servername: hostname, timeout: 10000 },
+      () => {
+        const cert = socket.getPeerCertificate();
+        const authorized = socket.authorized;
+        socket.end();
+        if (!cert || !cert.valid_to) {
+          resolve({ ok: false, error: "No certificate returned" });
+          return;
+        }
+        const validTo = new Date(cert.valid_to);
+        const validFrom = new Date(cert.valid_from);
+        const daysRemaining = Math.floor(
+          (validTo.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+        );
+        resolve({
+          ok: authorized && daysRemaining > 0,
+          authorized,
+          issuer: cert.issuer?.O || cert.issuer?.CN || "Unknown",
+          subject: cert.subject?.CN || hostname,
+          validFrom: validFrom.toISOString(),
+          validTo: validTo.toISOString(),
+          daysRemaining,
+        });
+      },
+    );
+    socket.on("error", (err) => resolve({ ok: false, error: err.message }));
+    socket.on("timeout", () => {
+      socket.destroy();
+      resolve({ ok: false, error: "TLS timeout" });
+    });
+  });
+}
+
+function runLighthouse(url) {
+  return new Promise((resolve) => {
+    const outFile = path.join(os.tmpdir(), `lh-${Date.now()}.json`);
+    const args = [
+      "-y",
+      "lighthouse",
+      url,
+      "--quiet",
+      "--output=json",
+      `--output-path=${outFile}`,
+      "--chrome-flags=--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage",
+      "--only-categories=performance,accessibility,best-practices,seo",
+      "--preset=desktop",
+      "--max-wait-for-load=45000",
+    ];
+    const child = spawn("npx", args, { stdio: "inherit" });
+    child.on("error", (err) => resolve({ ok: false, error: err.message }));
+    child.on("close", (code) => {
+      if (code !== 0 || !fs.existsSync(outFile)) {
+        resolve({ ok: false, error: `Lighthouse exited with code ${code}` });
+        return;
+      }
+      try {
+        const raw = JSON.parse(fs.readFileSync(outFile, "utf8"));
+        fs.unlinkSync(outFile);
+        const cat = raw.categories || {};
+        const audits = raw.audits || {};
+        const pct = (c) => (c?.score == null ? null : Math.round(c.score * 100));
+        resolve({
+          ok: true,
+          scores: {
+            performance: pct(cat.performance),
+            accessibility: pct(cat.accessibility),
+            bestPractices: pct(cat["best-practices"]),
+            seo: pct(cat.seo),
+          },
+          metrics: {
+            fcp: audits["first-contentful-paint"]?.displayValue ?? null,
+            lcp: audits["largest-contentful-paint"]?.displayValue ?? null,
+            tbt: audits["total-blocking-time"]?.displayValue ?? null,
+            cls: audits["cumulative-layout-shift"]?.displayValue ?? null,
+            speedIndex: audits["speed-index"]?.displayValue ?? null,
+          },
+        });
+      } catch (err) {
+        resolve({ ok: false, error: err.message });
+      }
+    });
+  });
+}
+
+async function collectData() {
+  console.log(`Collecting health data for ${SITE_URL}…`);
+  const [http, dnsResult, ssl, robots, sitemap, favicon] = await Promise.all([
+    checkHttp(SITE_URL),
+    checkDns(SITE_DOMAIN),
+    checkSsl(SITE_DOMAIN),
+    checkAsset(`${SITE_URL}/robots.txt`),
+    checkAsset(`${SITE_URL}/sitemap.xml`),
+    checkAsset(`${SITE_URL}/favicon.ico`),
   ]);
 
-  const failedChecks = await ddQueryMetric(
-    `sum:synthetics.test_runs{status:failure,url:*${SITE_DOMAIN}*}.as_count()`,
-  );
-
-  // RUM traffic + errors
-  const [sessions, visitors, browsers, devices, countries, jsErrors, replays, lcp, inp, cls] = await Promise.all([
-    ddRumQuery("@type:session", ["count"]),
-    ddRumQuery("@type:session", [{ aggregation: "cardinality", metric: "@usr.id" }].map(() => "count")),
-    ddRumQuery("@type:session", ["count"], ["@browser.name"]),
-    ddRumQuery("@type:session", ["count"], ["@device.type"]),
-    ddRumQuery("@type:session", ["count"], ["@geo.country"]),
-    ddRumQuery("@type:error", ["count"]),
-    ddRumQuery("@type:session @session.has_replay:true", ["count"]),
-    ddRumQuery("@type:view", [{ aggregation: "avg", metric: "@view.largest_contentful_paint" }].map(() => "avg")),
-    ddRumQuery("@type:view", ["avg"]),
-    ddRumQuery("@type:view", ["avg"]),
-  ]);
-
-  const total = (r) => r?.data?.buckets?.[0]?.computes?.c0 ?? null;
-  const groups = (r) =>
-    (r?.data?.buckets ?? []).map((b) => ({
-      key: Object.values(b.by ?? {})[0] ?? "unknown",
-      value: b.computes?.c0 ?? 0,
-    }));
+  console.log("Running Lighthouse…");
+  const lighthouse = await runLighthouse(SITE_URL);
 
   const data = {
     generatedAt: new Date(),
     domain: SITE_DOMAIN,
-    availability: {
-      uptime: uptime?.avg ?? null,
-      failedChecks: failedChecks?.values?.reduce((a, b) => a + b, 0) ?? 0,
-      homepageOk: uptime?.avg == null ? null : uptime.avg > 99,
-    },
-    performance: {
-      avg: respAvg?.avg ?? null,
-      min: respMin?.min ?? null,
-      max: respMax?.max ?? null,
-      trend: respAvg?.values ?? [],
-    },
-    security: {
-      sslDays: sslDays?.last ?? null,
-      sslOk: sslDays?.last != null ? sslDays.last > 15 : null,
-    },
-    traffic: {
-      sessions: total(sessions),
-      visitors: total(visitors),
-      browsers: groups(browsers),
-      devices: groups(devices),
-      countries: groups(countries),
-    },
-    appHealth: {
-      jsErrors: total(jsErrors),
-      replays: total(replays),
-      lcp: total(lcp),
-      inp: total(inp),
-      cls: total(cls),
-    },
+    url: SITE_URL,
+    http,
+    dns: dnsResult,
+    ssl,
+    assets: { robots, sitemap, favicon },
+    lighthouse,
   };
   data.healthScore = computeHealthScore(data);
+  data.recommendations = buildRecommendations(data);
   return data;
 }
 
 function computeHealthScore(d) {
   let score = 100;
-  if (d.availability.uptime != null && d.availability.uptime < 99.9) {
-    score -= Math.min(40, (99.9 - d.availability.uptime) * 10);
+  if (!d.http.ok) score -= 40;
+  else if (d.http.responseTimeMs > 2000) score -= 15;
+  else if (d.http.responseTimeMs > 1000) score -= 8;
+
+  if (!d.ssl.ok) score -= 20;
+  else if (d.ssl.daysRemaining != null && d.ssl.daysRemaining < 15) score -= 10;
+  else if (d.ssl.daysRemaining != null && d.ssl.daysRemaining < 30) score -= 5;
+
+  if (!d.dns.ok) score -= 10;
+  if (!d.assets.robots.ok) score -= 3;
+  if (!d.assets.sitemap.ok) score -= 3;
+  if (!d.assets.favicon.ok) score -= 2;
+
+  if (d.lighthouse.ok) {
+    const s = d.lighthouse.scores;
+    const penalty = (v) => (v == null ? 0 : Math.max(0, (90 - v) / 4));
+    score -= penalty(s.performance);
+    score -= penalty(s.accessibility) / 2;
+    score -= penalty(s.bestPractices) / 2;
+    score -= penalty(s.seo) / 2;
   }
-  if (d.availability.failedChecks > 0) score -= Math.min(15, d.availability.failedChecks * 2);
-  if (d.performance.avg != null && d.performance.avg > 500) {
-    score -= Math.min(20, (d.performance.avg - 500) / 50);
-  }
-  if (d.security.sslDays != null && d.security.sslDays < 30) score -= 10;
-  if (d.appHealth.jsErrors) score -= Math.min(15, d.appHealth.jsErrors);
+
   score = Math.max(0, Math.min(100, Math.round(score)));
   const grade =
-    score >= 95 ? "Excellent" : score >= 85 ? "Healthy" : score >= 70 ? "Fair" : score >= 50 ? "At Risk" : "Critical";
-  return { value: score, grade, summary: "Based on uptime, latency, SSL, and errors" };
+    score >= 95 ? "Excellent" :
+    score >= 85 ? "Healthy" :
+    score >= 70 ? "Fair" :
+    score >= 50 ? "At Risk" : "Critical";
+  return { value: score, grade };
 }
 
-// -------- PDF rendering --------
-function fmt(v, suffix = "", digits = 2) {
-  if (v == null || Number.isNaN(v)) return "N/A";
-  const n = typeof v === "number" ? v : Number(v);
-  if (Number.isNaN(n)) return String(v);
-  return `${n.toFixed(digits)}${suffix}`;
-}
-function fmtInt(v) {
-  if (v == null) return "N/A";
-  return Math.round(Number(v)).toLocaleString();
-}
-
-function buildSummary(d) {
-  const parts = [];
-  const up = d.availability.uptime;
-  if (up != null) {
-    parts.push(
-      up >= 99.9
-        ? `The site maintained excellent availability at ${up.toFixed(2)}% uptime over the last 24 hours.`
-        : up >= 99
-          ? `Availability was healthy at ${up.toFixed(2)}%, with minor variability worth monitoring.`
-          : `Availability dipped to ${up.toFixed(2)}%, indicating incidents that require investigation.`,
-    );
+function buildRecommendations(d) {
+  const recs = [];
+  if (!d.http.ok) recs.push(`Site returned status ${d.http.status || "0"} — investigate hosting or DNS immediately.`);
+  if (d.http.ok && d.http.responseTimeMs > 1500) recs.push(`Response time is ${d.http.responseTimeMs} ms; consider caching, CDN edge tuning, or reducing server work.`);
+  if (d.ssl.ok && d.ssl.daysRemaining != null && d.ssl.daysRemaining < 30) recs.push(`SSL certificate expires in ${d.ssl.daysRemaining} days — schedule renewal.`);
+  if (!d.ssl.ok) recs.push(`SSL check failed (${d.ssl.error || "invalid certificate"}); browsers may block visitors.`);
+  if (!d.dns.ok) recs.push("DNS resolution failed — verify nameserver and A/AAAA records.");
+  if (!d.assets.robots.ok) recs.push("robots.txt is missing or unreachable; add it at /robots.txt for crawler control.");
+  if (!d.assets.sitemap.ok) recs.push("sitemap.xml is missing; publish one at /sitemap.xml to improve indexing.");
+  if (!d.assets.favicon.ok) recs.push("favicon.ico is missing; add one for brand recognition in tabs and bookmarks.");
+  if (d.lighthouse.ok) {
+    const s = d.lighthouse.scores;
+    if (s.performance != null && s.performance < 90) recs.push(`Lighthouse performance is ${s.performance}/100 — audit LCP, TBT and image sizes.`);
+    if (s.accessibility != null && s.accessibility < 95) recs.push(`Accessibility is ${s.accessibility}/100 — review color contrast, ARIA labels and semantic landmarks.`);
+    if (s.bestPractices != null && s.bestPractices < 95) recs.push(`Best Practices is ${s.bestPractices}/100 — check console errors and secure headers.`);
+    if (s.seo != null && s.seo < 95) recs.push(`SEO is ${s.seo}/100 — verify meta tags, canonical links, and structured data.`);
+  } else {
+    recs.push(`Lighthouse audit did not run (${d.lighthouse.error || "unknown reason"}).`);
   }
-  if (d.performance.avg != null) {
-    parts.push(
-      d.performance.avg < 500
-        ? `Average response time was fast at ${Math.round(d.performance.avg)} ms.`
-        : d.performance.avg < 1500
-          ? `Average response time was acceptable at ${Math.round(d.performance.avg)} ms.`
-          : `Average response time was elevated at ${Math.round(d.performance.avg)} ms and should be reviewed.`,
-    );
-  }
-  if (d.security.sslDays != null) {
-    parts.push(
-      d.security.sslDays > 30
-        ? `SSL certificate is healthy (${Math.floor(d.security.sslDays)} days until expiry).`
-        : `SSL certificate expires in ${Math.floor(d.security.sslDays)} days — renewal window approaching.`,
-    );
-  }
-  if (d.appHealth.jsErrors != null) {
-    parts.push(
-      d.appHealth.jsErrors === 0
-        ? `No client-side JavaScript errors were reported.`
-        : `${fmtInt(d.appHealth.jsErrors)} client-side errors were captured by RUM.`,
-    );
-  }
-  if (d.traffic.sessions != null) {
-    parts.push(`RUM recorded ${fmtInt(d.traffic.sessions)} sessions in the last 24 hours.`);
-  }
-  return parts.join(" ");
+  if (recs.length === 0) recs.push("All checks passed — no action required. Keep monitoring daily.");
+  return recs;
 }
 
-function renderPDF(data, outPath) {
+// ============================================================
+// PDF rendering
+// ============================================================
+
+function statusColor(ok) {
+  return ok ? COLORS.good : COLORS.bad;
+}
+
+function section(doc, title, y) {
+  if (y > doc.page.height - 120) {
+    doc.addPage();
+    y = 60;
+  }
+  doc.font("Helvetica-Bold").fontSize(13).fillColor(COLORS.navy).text(title, 50, y);
+  doc.strokeColor(COLORS.cobalt).lineWidth(1.5)
+    .moveTo(50, y + 18).lineTo(120, y + 18).stroke();
+  return y + 28;
+}
+
+function kvRow(doc, key, value, x, y, w, opts = {}) {
+  doc.font("Helvetica").fontSize(10).fillColor(COLORS.muted).text(key, x + 10, y + 6, { width: w * 0.4 - 10 });
+  doc.font("Helvetica-Bold").fontSize(10).fillColor(opts.color || COLORS.ink)
+    .text(String(value), x + w * 0.4, y + 6, { width: w * 0.6 - 10, align: "left" });
+  return y + 22;
+}
+
+function drawKvTable(doc, rows, x, y, w) {
+  rows.forEach((r, i) => {
+    if (i % 2 === 0) doc.rect(x, y, w, 22).fill(COLORS.bg);
+    doc.fillColor(COLORS.ink);
+    kvRow(doc, r[0], r[1], x, y, w, { color: r[2] });
+    y += 22;
+  });
+  return y;
+}
+
+function generatePdf(data, outPath) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 50, bufferPages: true });
     const stream = fs.createWriteStream(outPath);
     doc.pipe(stream);
 
-    // ---- Header band with brand monogram ----
-    doc.rect(0, 0, doc.page.width, 110).fill(COLORS.navy);
-    // Monogram badge
-    doc.circle(85, 55, 26).fill(COLORS.cobalt);
-    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20)
-      .text("PP", 65, 44, { width: 40, align: "center" });
-    // Title block
-    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(20)
-      .text("Daily Website Health Report", 130, 32);
-    doc.font("Helvetica").fontSize(10).fillColor("#C7D2FE")
-      .text(`${BRAND} · ${BRAND_TAGLINE}`, 130, 58);
-    doc.font("Helvetica").fontSize(9).fillColor("#9CA8D6")
-      .text(`${SITE_URL}  ·  ${data.generatedAt.toUTCString()}`, 130, 74);
+    // -------- Cover page --------
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FFFFFF");
+    doc.rect(0, 0, doc.page.width, 260).fill(COLORS.navy);
+    doc.circle(doc.page.width / 2, 110, 34).fill(COLORS.cobalt);
+    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(24)
+      .text("PP", 0, 96, { width: doc.page.width, align: "center" });
+    doc.font("Helvetica-Bold").fontSize(26).fillColor("#FFFFFF")
+      .text("Daily Website Health Report", 50, 170, { width: doc.page.width - 100, align: "center" });
+    doc.font("Helvetica").fontSize(12).fillColor("#C7D2FE")
+      .text(`${BRAND} · ${BRAND_TAGLINE}`, 50, 210, { width: doc.page.width - 100, align: "center" });
+    doc.fillColor("#9CA8D6").fontSize(10)
+      .text(data.url, 50, 232, { width: doc.page.width - 100, align: "center" });
 
-    doc.fillColor(COLORS.ink);
+    const s = data.healthScore;
+    const scoreColor = s.value >= 90 ? COLORS.good : s.value >= 70 ? COLORS.warn : COLORS.bad;
+    doc.roundedRect(120, 320, doc.page.width - 240, 130, 8).fill(COLORS.bg);
+    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(10)
+      .text("OVERALL HEALTH SCORE", 0, 340, { width: doc.page.width, align: "center" });
+    doc.fillColor(scoreColor).font("Helvetica-Bold").fontSize(60)
+      .text(`${s.value}`, 0, 358, { width: doc.page.width, align: "center" });
+    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(14)
+      .text(s.grade, 0, 425, { width: doc.page.width, align: "center" });
 
-    // ---- Health score hero card ----
-    const score = data.healthScore;
-    const scoreColor = score.value >= 90 ? COLORS.good : score.value >= 70 ? COLORS.warn : COLORS.bad;
-    doc.roundedRect(50, 130, doc.page.width - 100, 70, 6).fill(COLORS.bg);
-    doc.roundedRect(50, 130, 6, 70, 3).fill(scoreColor);
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9)
-      .text("OVERALL HEALTH SCORE", 70, 142);
-    doc.fillColor(scoreColor).font("Helvetica-Bold").fontSize(34)
-      .text(`${score.value}`, 70, 156, { continued: true })
-      .fillColor(COLORS.muted).fontSize(14).text("  / 100");
-    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11)
-      .text(score.grade, doc.page.width - 200, 148, { width: 140, align: "right" });
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9)
-      .text(score.summary, doc.page.width - 260, 168, { width: 200, align: "right" });
+    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(10)
+      .text(`Generated ${data.generatedAt.toUTCString()}`, 50, doc.page.height - 80, { width: doc.page.width - 100, align: "center" });
 
-    // ---- Meta table ----
-    const metaY = 215;
-    const meta = [
-      ["Domain", SITE_URL],
-      ["Hosting Provider", "Vercel"],
-      ["Monitoring Platform", "Datadog (RUM + Synthetics)"],
-      ["Report Generated", data.generatedAt.toISOString()],
-    ];
-    drawKvTable(doc, meta, 50, metaY, doc.page.width - 100);
-
-    let y = metaY + meta.length * 22 + 20;
+    // -------- Body page --------
+    doc.addPage();
+    let y = 50;
 
     // Executive summary
     y = section(doc, "Executive Summary", y);
     doc.font("Helvetica").fontSize(10.5).fillColor(COLORS.ink)
       .text(buildSummary(data), 50, y, { width: doc.page.width - 100, lineGap: 3 });
-    y = doc.y + 15;
+    y = doc.y + 18;
 
-    // Availability
-    y = section(doc, "Availability", y);
-    y = drawKvTable(
-      doc,
-      [
-        ["Website Status", statusText(data.availability.uptime)],
-        ["Uptime Percentage", fmt(data.availability.uptime, "%")],
-        ["Downtime Incidents", fmtInt(data.availability.failedChecks)],
-        ["Failed Checks (24h)", fmtInt(data.availability.failedChecks)],
-        ["Homepage Availability", data.availability.homepageOk == null ? "N/A" : data.availability.homepageOk ? "Healthy" : "Degraded"],
-      ],
-      50,
-      y,
-      doc.page.width - 100,
-    );
-    y += 15;
+    // Website status
+    y = section(doc, "Website Status", y);
+    const httpRows = [
+      ["Website URL", data.url],
+      ["Status", data.http.ok ? "Online" : "Offline", statusColor(data.http.ok)],
+      ["HTTP Status Code", `${data.http.status} ${data.http.statusText || ""}`.trim(), statusColor(data.http.ok)],
+      ["Response Time", `${data.http.responseTimeMs} ms`],
+      ["Final URL", data.http.finalUrl || data.url],
+      ["DNS Lookup", data.dns.ok ? `OK — A: ${data.dns.a.join(", ") || "none"}` : `Failed (${data.dns.error || "no records"})`, statusColor(data.dns.ok)],
+      ["robots.txt", data.assets.robots.ok ? `Available (${data.assets.robots.status})` : `Missing (${data.assets.robots.status || "error"})`, statusColor(data.assets.robots.ok)],
+      ["sitemap.xml", data.assets.sitemap.ok ? `Available (${data.assets.sitemap.status})` : `Missing (${data.assets.sitemap.status || "error"})`, statusColor(data.assets.sitemap.ok)],
+      ["favicon.ico", data.assets.favicon.ok ? `Available (${data.assets.favicon.status})` : `Missing (${data.assets.favicon.status || "error"})`, statusColor(data.assets.favicon.ok)],
+    ];
+    y = drawKvTable(doc, httpRows, 50, y, doc.page.width - 100) + 15;
 
     // Performance
     y = section(doc, "Performance", y);
-    y = drawKvTable(
-      doc,
-      [
-        ["Average Response Time", fmt(data.performance.avg, " ms", 0)],
-        ["Fastest Response", fmt(data.performance.min, " ms", 0)],
-        ["Slowest Response", fmt(data.performance.max, " ms", 0)],
-      ],
-      50,
-      y,
-      doc.page.width - 100,
-    );
-    if (data.performance.trend?.length) {
-      y += 10;
-      drawSparkline(doc, data.performance.trend, 50, y, doc.page.width - 100, 60);
-      y += 70;
+    const lh = data.lighthouse;
+    const perfRows = [
+      ["Response Time", `${data.http.responseTimeMs} ms`],
+      ["First Contentful Paint", lh.ok ? lh.metrics.fcp ?? "N/A" : "N/A"],
+      ["Largest Contentful Paint", lh.ok ? lh.metrics.lcp ?? "N/A" : "N/A"],
+      ["Total Blocking Time", lh.ok ? lh.metrics.tbt ?? "N/A" : "N/A"],
+      ["Cumulative Layout Shift", lh.ok ? lh.metrics.cls ?? "N/A" : "N/A"],
+      ["Speed Index", lh.ok ? lh.metrics.speedIndex ?? "N/A" : "N/A"],
+    ];
+    y = drawKvTable(doc, perfRows, 50, y, doc.page.width - 100) + 15;
+
+    // SSL
+    y = section(doc, "SSL Certificate", y);
+    const sslRows = data.ssl.ok
+      ? [
+          ["Valid", "Yes", COLORS.good],
+          ["Issuer", data.ssl.issuer ?? "Unknown"],
+          ["Subject", data.ssl.subject ?? data.domain],
+          ["Valid From", data.ssl.validFrom ?? "N/A"],
+          ["Expiry Date", data.ssl.validTo ?? "N/A"],
+          ["Days Remaining", `${data.ssl.daysRemaining ?? "N/A"}`, (data.ssl.daysRemaining ?? 0) < 30 ? COLORS.warn : COLORS.good],
+        ]
+      : [
+          ["Valid", "No", COLORS.bad],
+          ["Error", data.ssl.error ?? "Unknown", COLORS.bad],
+        ];
+    y = drawKvTable(doc, sslRows, 50, y, doc.page.width - 100) + 15;
+
+    // Lighthouse
+    y = section(doc, "Lighthouse Scores", y);
+    if (lh.ok) {
+      const lhRows = [
+        ["Performance", `${lh.scores.performance ?? "N/A"} / 100`, scoreCatColor(lh.scores.performance)],
+        ["Accessibility", `${lh.scores.accessibility ?? "N/A"} / 100`, scoreCatColor(lh.scores.accessibility)],
+        ["Best Practices", `${lh.scores.bestPractices ?? "N/A"} / 100`, scoreCatColor(lh.scores.bestPractices)],
+        ["SEO", `${lh.scores.seo ?? "N/A"} / 100`, scoreCatColor(lh.scores.seo)],
+      ];
+      y = drawKvTable(doc, lhRows, 50, y, doc.page.width - 100) + 15;
+    } else {
+      doc.font("Helvetica").fontSize(10).fillColor(COLORS.muted)
+        .text(`Lighthouse did not run: ${lh.error || "unknown"}`, 50, y, { width: doc.page.width - 100 });
+      y = doc.y + 15;
     }
 
-    // Security
-    y = section(doc, "Security", y);
-    y = drawKvTable(
-      doc,
-      [
-        ["SSL Certificate Status", data.security.sslOk == null ? "N/A" : data.security.sslOk ? "Valid" : "Renewal Due"],
-        ["Days Until SSL Expiry", data.security.sslDays == null ? "N/A" : `${Math.floor(data.security.sslDays)} days`],
-      ],
-      50,
-      y,
-      doc.page.width - 100,
-    );
-    y += 15;
+    // Recommendations
+    y = section(doc, "Recommendations", y);
+    data.recommendations.forEach((r) => {
+      if (y > doc.page.height - 90) {
+        doc.addPage();
+        y = 50;
+      }
+      doc.circle(56, y + 6, 2).fill(COLORS.cobalt);
+      doc.font("Helvetica").fontSize(10).fillColor(COLORS.ink)
+        .text(r, 66, y, { width: doc.page.width - 116, lineGap: 2 });
+      y = doc.y + 8;
+    });
 
-    if (y > doc.page.height - 200) {
-      doc.addPage();
-      y = 50;
-    }
-
-    // Traffic
-    y = section(doc, "Traffic (RUM, last 24h)", y);
-    y = drawKvTable(
-      doc,
-      [
-        ["Total Sessions", fmtInt(data.traffic.sessions)],
-        ["Unique Visitors", fmtInt(data.traffic.visitors)],
-      ],
-      50,
-      y,
-      doc.page.width - 100,
-    );
-    y += 10;
-    y = drawList(doc, "Top Browsers", data.traffic.browsers, 50, y);
-    y = drawList(doc, "Device Distribution", data.traffic.devices, 50, y);
-    y = drawList(doc, "Top Countries", data.traffic.countries, 50, y);
-
-    if (y > doc.page.height - 200) {
-      doc.addPage();
-      y = 50;
-    }
-
-    // App Health
-    y = section(doc, "Application Health", y);
-    drawKvTable(
-      doc,
-      [
-        ["JavaScript Errors", fmtInt(data.appHealth.jsErrors)],
-        ["Session Replays", fmtInt(data.appHealth.replays)],
-        ["LCP (avg)", data.appHealth.lcp == null ? "N/A" : `${Math.round(data.appHealth.lcp)} ms`],
-        ["INP (avg)", data.appHealth.inp == null ? "N/A" : `${Math.round(data.appHealth.inp)} ms`],
-        ["CLS (avg)", data.appHealth.cls == null ? "N/A" : data.appHealth.cls.toFixed(3)],
-      ],
-      50,
-      y,
-      doc.page.width - 100,
-    );
-
-    // Page numbers + footer
+    // Footer / page numbers
     const range = doc.bufferedPageRange();
     for (let i = 0; i < range.count; i++) {
       doc.switchToPage(i);
-      // Divider
       doc.strokeColor(COLORS.line).lineWidth(0.5)
         .moveTo(50, doc.page.height - 45).lineTo(doc.page.width - 50, doc.page.height - 45).stroke();
       doc.font("Helvetica").fontSize(8).fillColor(COLORS.muted).text(
-        `${BRAND} · ${SITE_URL}  ·  Generated ${data.generatedAt.toISOString()}  ·  Page ${i + 1} of ${range.count}`,
+        `${BRAND} · ${data.url}  ·  Generated ${data.generatedAt.toISOString()}  ·  Page ${i + 1} of ${range.count}`,
         50,
         doc.page.height - 35,
         { width: doc.page.width - 100, align: "center" },
@@ -449,118 +459,57 @@ function renderPDF(data, outPath) {
   });
 }
 
-function statusText(uptime) {
-  if (uptime == null) return "N/A";
-  if (uptime >= 99.9) return "Operational";
-  if (uptime >= 99) return "Minor Issues";
-  return "Degraded";
+function scoreCatColor(v) {
+  if (v == null) return COLORS.muted;
+  if (v >= 90) return COLORS.good;
+  if (v >= 70) return COLORS.warn;
+  return COLORS.bad;
 }
 
-function section(doc, title, y) {
-  if (y > doc.page.height - 120) {
-    doc.addPage();
-    y = 50;
+function buildSummary(d) {
+  const parts = [];
+  parts.push(`On ${d.generatedAt.toUTCString()}, ${d.url} was ${d.http.ok ? "online" : "offline"} (HTTP ${d.http.status || "n/a"}, ${d.http.responseTimeMs} ms).`);
+  if (d.ssl.ok) parts.push(`SSL is valid and expires in ${d.ssl.daysRemaining} days (issued by ${d.ssl.issuer}).`);
+  else parts.push(`SSL check failed: ${d.ssl.error || "invalid certificate"}.`);
+  if (d.lighthouse.ok) {
+    const s = d.lighthouse.scores;
+    parts.push(`Lighthouse — Performance ${s.performance ?? "n/a"}, Accessibility ${s.accessibility ?? "n/a"}, Best Practices ${s.bestPractices ?? "n/a"}, SEO ${s.seo ?? "n/a"}.`);
   }
-  doc.rect(50, y, doc.page.width - 100, 24).fill(COLORS.cobalt);
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(12)
-    .text(title.toUpperCase(), 60, y + 7);
-  doc.fillColor(COLORS.ink);
-  return y + 34;
+  parts.push(`Overall health score: ${d.healthScore.value}/100 (${d.healthScore.grade}).`);
+  return parts.join(" ");
 }
 
-function drawKvTable(doc, rows, x, y, width) {
-  const rowH = 22;
-  rows.forEach((r, i) => {
-    if (i % 2 === 0) {
-      doc.rect(x, y + i * rowH, width, rowH).fill(COLORS.bg);
-    }
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(10)
-      .text(r[0], x + 12, y + i * rowH + 6, { width: width * 0.5 });
-    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10)
-      .text(String(r[1]), x + width * 0.5, y + i * rowH + 6, { width: width * 0.5 - 12, align: "right" });
-  });
-  doc.strokeColor(COLORS.line).lineWidth(0.5)
-    .rect(x, y, width, rows.length * rowH).stroke();
-  return y + rows.length * rowH + 8;
-}
+// ============================================================
+// Email
+// ============================================================
 
-function drawList(doc, title, items, x, y) {
-  if (!items?.length) {
-    doc.fillColor(COLORS.muted).font("Helvetica-Oblique").fontSize(10)
-      .text(`${title}: no data`, x, y);
-    return y + 16;
+async function sendEmail(pdfPath, data) {
+  if (SKIP_EMAIL) {
+    console.log("SKIP_EMAIL set — skipping email send.");
+    return;
   }
-  doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(11).text(title, x, y);
-  y += 16;
-  const total = items.reduce((a, b) => a + (b.value || 0), 0) || 1;
-  items.slice(0, 5).forEach((it) => {
-    const pct = ((it.value / total) * 100).toFixed(1);
-    doc.fillColor(COLORS.ink).font("Helvetica").fontSize(10)
-      .text(`${it.key}`, x + 10, y, { continued: true })
-      .fillColor(COLORS.muted)
-      .text(`   ${fmtInt(it.value)} (${pct}%)`);
-    y += 14;
-  });
-  return y + 6;
-}
-
-function drawSparkline(doc, values, x, y, w, h) {
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  doc.rect(x, y, w, h).fill(COLORS.bg);
-  doc.strokeColor(COLORS.cobalt).lineWidth(1.5);
-  values.forEach((v, i) => {
-    const px = x + (i / (values.length - 1 || 1)) * w;
-    const py = y + h - ((v - min) / range) * (h - 10) - 5;
-    if (i === 0) doc.moveTo(px, py);
-    else doc.lineTo(px, py);
-  });
-  doc.stroke();
-  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
-    .text(`Response time trend (min ${Math.round(min)}ms — max ${Math.round(max)}ms)`, x + 6, y + h - 12);
-}
-
-// -------- Email --------
-function makeTransport() {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
-  const port = Number(SMTP_PORT || 465);
-  return nodemailer.createTransport({
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+    console.warn("SMTP env vars missing — skipping email send.");
+    return;
+  }
+  const port = Number(SMTP_PORT);
+  const transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port,
     secure: port === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
-}
+  const date = data.generatedAt.toISOString().slice(0, 10);
+  const body = `Hello Piyush,
 
-function formatDate(d) {
-  return d.toISOString().slice(0, 10);
-}
+Please find attached today's Website Health Report for ${data.url}.
 
-async function sendReportEmail(pdfPath, data) {
-  if (SKIP_EMAIL === "1") {
-    console.log("SKIP_EMAIL=1, not sending.");
-    return;
-  }
-  const transporter = makeTransport();
-  if (!transporter) {
-    console.log("SMTP env not configured; skipping email.");
-    return;
-  }
-  const date = formatDate(data.generatedAt);
-  const body = [
-    "Hello Piyush,",
-    "",
-    `Please find attached today's Website Health Report for ${SITE_URL}.`,
-    "",
-    "This report contains uptime, response time, SSL status, homepage availability, visitor analytics, and overall website health.",
-    "",
-    `Overall Health Score: ${data.healthScore.value}/100 (${data.healthScore.grade})`,
-    "",
-    "Regards,",
-    "Automated Monitoring System",
-  ].join("\n");
+This report contains uptime, response time, SSL status, DNS, asset availability, and Lighthouse audit scores.
 
+Overall Health Score: ${data.healthScore.value}/100 (${data.healthScore.grade})
+
+Regards,
+Automated Monitoring System`;
   await transporter.sendMail({
     from: REPORT_FROM || SMTP_USER,
     to: REPORT_TO,
@@ -572,58 +521,45 @@ async function sendReportEmail(pdfPath, data) {
 }
 
 async function sendFailureAlert(err) {
-  if (SKIP_EMAIL === "1") return;
-  const transporter = makeTransport();
-  if (!transporter) {
-    console.error("Cannot send failure alert: SMTP env not configured.");
-    return;
-  }
-  const date = formatDate(new Date());
-  const alertTo = ALERT_TO || REPORT_TO;
-  const body = [
-    "Hello Piyush,",
-    "",
-    `The automated Daily Website Health Report for ${SITE_URL} FAILED to generate or deliver on ${date}.`,
-    "",
-    "Failure details:",
-    "----------------",
-    String(err?.stack || err?.message || err),
-    "",
-    "Please review the GitHub Actions run logs for the full trace.",
-    "",
-    "Regards,",
-    "Automated Monitoring System",
-  ].join("\n");
+  if (SKIP_EMAIL) return;
+  const to = ALERT_TO || REPORT_TO;
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !to) return;
   try {
+    const port = Number(SMTP_PORT);
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port,
+      secure: port === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
     await transporter.sendMail({
       from: REPORT_FROM || SMTP_USER,
-      to: alertTo,
-      subject: `[ALERT] Daily Website Health Report FAILED - ${date}`,
-      text: body,
+      to,
+      subject: `⚠️ Daily Website Health Report FAILED - ${SITE_DOMAIN}`,
+      text: `The daily health report pipeline failed at ${new Date().toISOString()}.\n\n${err?.stack || err?.message || String(err)}`,
     });
-    console.error(`Failure alert sent to ${alertTo}`);
   } catch (e) {
     console.error("Failed to send failure alert:", e);
   }
 }
 
-// -------- Main --------
-async function main() {
-  if (!DD_API_KEY || !DD_APP_KEY) {
-    throw new Error("Missing DD_API_KEY / DD_APP_KEY environment variables");
-  }
-  const data = await collect();
-  const date = formatDate(data.generatedAt);
-  const outDir = path.join(__dirname, "..", "reports");
-  fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, `Daily-Website-Report-${date}.pdf`);
-  await renderPDF(data, outPath);
-  console.log(`PDF written: ${outPath}`);
-  await sendReportEmail(outPath, data);
-}
+// ============================================================
+// Main
+// ============================================================
 
-main().catch(async (err) => {
-  console.error(err);
-  await sendFailureAlert(err);
-  process.exit(1);
-});
+(async () => {
+  try {
+    const data = await collectData();
+    const reportsDir = path.join(__dirname, "reports");
+    fs.mkdirSync(reportsDir, { recursive: true });
+    const date = data.generatedAt.toISOString().slice(0, 10);
+    const pdfPath = path.join(reportsDir, `Daily-Website-Report-${date}.pdf`);
+    await generatePdf(data, pdfPath);
+    console.log(`PDF written to ${pdfPath}`);
+    await sendEmail(pdfPath, data);
+  } catch (err) {
+    console.error(err);
+    await sendFailureAlert(err);
+    process.exit(1);
+  }
+})();

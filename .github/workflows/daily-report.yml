@@ -2,14 +2,13 @@ name: Daily Website Health Report
 
 on:
   schedule:
-    # Runs every day at 7:00 PM IST (13:30 UTC)
+    # 19:00 IST = 13:30 UTC
     - cron: "30 13 * * *"
   workflow_dispatch:
 
 jobs:
   report:
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
 
@@ -22,6 +21,11 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Install Google Chrome (for Lighthouse)
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
       - name: Install Report Dependencies
         working-directory: scripts
         run: npm install --no-audit --no-fund
@@ -29,17 +33,19 @@ jobs:
       - name: Generate and Email Report
         working-directory: scripts
         env:
-          SITE_DOMAIN: piyushprasad.in
-          SMTP_HOST: ${{ smtp.gmail.com }}
-          SMTP_PORT: ${{ 465 }}
-          SMTP_USER: ${{ hursh230@gmail.com }}
-          SMTP_PASS: ${{ ocbcsyhchmhmogdl }}
-          REPORT_TO: ${{ hello.piyushprasad.in }}
-          REPORT_FROM: ${{ hursh230@gmail.com }}
-          ALERT_TO: ${{ hello.piyushprasad.in }}
+          SITE_DOMAIN: ${{ secrets.SITE_DOMAIN }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          REPORT_TO: ${{ secrets.REPORT_TO }}
+          REPORT_FROM: ${{ secrets.REPORT_FROM }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+          CHROME_PATH: /opt/hostedtoolcache/setup-chrome/chromium/stable/x64/chrome
         run: node generate-report.mjs
 
       - name: Upload Report Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: daily-website-report
