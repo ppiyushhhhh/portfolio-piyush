@@ -327,11 +327,12 @@ function buildRecommendations(d) {
 }
 
 // ============================================================
-// PDF rendering — 2-page executive layout
+// PDF rendering — strict 2-page executive dashboard
 // ============================================================
 
 const PAGE = { w: 595.28, h: 841.89 };
 const MARGIN = 36;
+const REPORT_VERSION = "2.1";
 
 function statusColor(ok) {
   return ok ? COLORS.good : COLORS.bad;
@@ -344,102 +345,123 @@ function scoreCatColor(v) {
   return COLORS.bad;
 }
 
+function truncate(str, max) {
+  if (str == null) return "—";
+  const s = String(str);
+  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+}
+
 function drawHeader(doc, data) {
   const x = MARGIN;
   const y = MARGIN;
   const w = PAGE.w - MARGIN * 2;
 
-  doc.roundedRect(x, y, 44, 44, 8).fill(COLORS.navy);
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(16)
-    .text("PP", x, y + 14, { width: 44, align: "center" });
+  doc.roundedRect(x, y, 40, 40, 8).fill(COLORS.navy);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(15)
+    .text("PP", x, y + 12, { width: 40, align: "center" });
 
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(13)
-    .text(BRAND, x + 56, y + 4);
-  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9)
-    .text("IT Operations | DevOps | Cloud", x + 56, y + 20);
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12)
+    .text(BRAND, x + 52, y + 4);
   doc.fillColor(COLORS.cobalt).font("Helvetica").fontSize(9)
-    .text(data.url, x + 56, y + 33);
-
+    .text(data.url, x + 52, y + 20);
   doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
-    .text("REPORT GENERATED", x, y + 4, { width: w, align: "right" });
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10)
+    .text(BRAND_TAGLINE, x + 52, y + 32);
+
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7.5)
+    .text("REPORT GENERATED", x, y + 4, { width: w, align: "right", characterSpacing: 0.6 });
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(9.5)
     .text(data.generatedAt.toUTCString(), x, y + 16, { width: w, align: "right" });
   doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
-    .text("Daily Website Health Report", x, y + 32, { width: w, align: "right" });
+    .text(`Version ${REPORT_VERSION}`, x, y + 30, { width: w, align: "right" });
 
   doc.strokeColor(COLORS.line).lineWidth(0.7)
-    .moveTo(x, y + 56).lineTo(x + w, y + 56).stroke();
+    .moveTo(x, y + 50).lineTo(x + w, y + 50).stroke();
 
-  return y + 68;
+  return y + 62;
 }
 
 function drawFooter(doc, data, pageNum, total) {
   const y = PAGE.h - 28;
+  const w = PAGE.w - MARGIN * 2;
   doc.strokeColor(COLORS.line).lineWidth(0.5)
     .moveTo(MARGIN, y - 6).lineTo(PAGE.w - MARGIN, y - 6).stroke();
+  const repo = data.git?.repoUrl ? ` · ${data.git.repoUrl}` : "";
   doc.font("Helvetica").fontSize(7.5).fillColor(COLORS.muted)
-    .text(`Generated automatically by GitHub Actions  ·  Portfolio: ${data.url}`,
-      MARGIN, y, { width: PAGE.w - MARGIN * 2, align: "left" });
+    .text(
+      `Generated automatically by GitHub Actions · ${data.url}${repo} · ${data.generatedAt.toISOString()}`,
+      MARGIN, y, { width: w, align: "left" },
+    );
   doc.text(`Page ${pageNum} of ${total}`, MARGIN, y, {
-    width: PAGE.w - MARGIN * 2, align: "right",
+    width: w, align: "right",
   });
 }
 
 function sectionTitle(doc, title, x, y, w) {
-  doc.font("Helvetica-Bold").fontSize(11).fillColor(COLORS.navy)
+  doc.font("Helvetica-Bold").fontSize(10.5).fillColor(COLORS.navy)
     .text(title.toUpperCase(), x, y, { width: w, characterSpacing: 0.8 });
-  doc.strokeColor(COLORS.cobalt).lineWidth(1.2)
-    .moveTo(x, y + 14).lineTo(x + 28, y + 14).stroke();
+  doc.strokeColor(COLORS.cobalt).lineWidth(1.4)
+    .moveTo(x, y + 14).lineTo(x + 26, y + 14).stroke();
   return y + 22;
+}
+
+function drawInfoStrip(doc, items, x, y, w) {
+  const h = 26;
+  doc.roundedRect(x, y, w, h, 6).fill(COLORS.bg);
+  const cellW = w / items.length;
+  items.forEach((it, i) => {
+    const cx = x + i * cellW;
+    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7).text(
+      it.label.toUpperCase(), cx + 10, y + 5,
+      { width: cellW - 20, characterSpacing: 0.5 },
+    );
+    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(9).text(
+      truncate(it.value, 34), cx + 10, y + 14,
+      { width: cellW - 20, ellipsis: true },
+    );
+    if (i > 0) {
+      doc.strokeColor(COLORS.line).lineWidth(0.5)
+        .moveTo(cx, y + 5).lineTo(cx, y + h - 5).stroke();
+    }
+  });
+  return y + h;
 }
 
 function drawScoreBadge(doc, data, x, y, w, h) {
   const s = data.healthScore;
   const scoreColor = s.value >= 90 ? COLORS.good : s.value >= 70 ? COLORS.warn : COLORS.bad;
   doc.roundedRect(x, y, w, h, 8).fill(COLORS.bg);
-  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
-    .text("OVERALL HEALTH SCORE", x, y + 12, { width: w, align: "center", characterSpacing: 0.6 });
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7.5)
+    .text("OVERALL HEALTH SCORE", x, y + 12,
+      { width: w, align: "center", characterSpacing: 0.6 });
   const cx = x + w / 2;
-  const cy = y + h / 2 + 6;
-  doc.circle(cx, cy, 34).fill("#FFFFFF");
-  doc.circle(cx, cy, 34).lineWidth(2).strokeColor(scoreColor).stroke();
-  doc.fillColor(scoreColor).font("Helvetica-Bold").fontSize(26)
-    .text(`${s.value}`, x, cy - 14, { width: w, align: "center" });
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11)
-    .text(s.grade, x, y + h - 20, { width: w, align: "center" });
+  const cy = y + h / 2 + 4;
+  doc.circle(cx, cy, 32).fill("#FFFFFF");
+  doc.circle(cx, cy, 32).lineWidth(2).strokeColor(scoreColor).stroke();
+  doc.fillColor(scoreColor).font("Helvetica-Bold").fontSize(24)
+    .text(`${s.value}`, x, cy - 13, { width: w, align: "center" });
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10)
+    .text(s.grade, x, y + h - 18, { width: w, align: "center" });
 }
 
 function drawSummaryCard(doc, label, value, x, y, w, h, color) {
   doc.roundedRect(x, y, w, h, 6).fill(COLORS.bg);
-  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7.5)
-    .text(label.toUpperCase(), x + 10, y + 9, { width: w - 20, characterSpacing: 0.5 });
-  doc.fillColor(color || COLORS.ink).font("Helvetica-Bold").fontSize(12)
-    .text(String(value), x + 10, y + 24, { width: w - 20, ellipsis: true, height: h - 28 });
-}
-
-function drawSummaryGrid(doc, cards, x, y, w) {
-  const cols = 3;
-  const gap = 8;
-  const cardW = (w - gap * (cols - 1)) / cols;
-  const cardH = 48;
-  cards.forEach((c, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    drawSummaryCard(doc, c.label, c.value,
-      x + col * (cardW + gap), y + row * (cardH + gap),
-      cardW, cardH, c.color);
-  });
-  const rows = Math.ceil(cards.length / cols);
-  return y + rows * cardH + (rows - 1) * gap;
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7)
+    .text(label.toUpperCase(), x + 10, y + 8,
+      { width: w - 20, characterSpacing: 0.5 });
+  doc.fillColor(color || COLORS.ink).font("Helvetica-Bold").fontSize(11)
+    .text(truncate(value, 22), x + 10, y + 21,
+      { width: w - 20, ellipsis: true, height: h - 24 });
 }
 
 function drawLighthouseCard(doc, label, score, x, y, w, h) {
   const color = scoreCatColor(score);
   doc.roundedRect(x, y, w, h, 6).fill(COLORS.bg);
   doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7.5)
-    .text(label.toUpperCase(), x, y + 8, { width: w, align: "center", characterSpacing: 0.5 });
+    .text(label.toUpperCase(), x, y + 8,
+      { width: w, align: "center", characterSpacing: 0.5 });
   doc.fillColor(color).font("Helvetica-Bold").fontSize(22)
-    .text(score == null ? "—" : `${score}`, x, y + 20, { width: w, align: "center" });
+    .text(score == null ? "—" : `${score}`, x, y + 20,
+      { width: w, align: "center" });
   doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7)
     .text("/ 100", x, y + 46, { width: w, align: "center" });
 }
@@ -462,16 +484,39 @@ function drawLighthouseGrid(doc, lh, x, y, w) {
 }
 
 function drawMetricsTable(doc, rows, x, y, w) {
-  const rowH = 22;
+  const rowH = 20;
   rows.forEach((r, i) => {
     if (i % 2 === 0) doc.rect(x, y, w, rowH).fill(COLORS.bg);
-    doc.font("Helvetica").fontSize(9.5).fillColor(COLORS.muted)
-      .text(r[0], x + 12, y + 7, { width: w * 0.5 - 12 });
-    doc.font("Helvetica-Bold").fontSize(9.5).fillColor(r[2] || COLORS.ink)
-      .text(String(r[1]), x + w * 0.5, y + 7, { width: w * 0.5 - 12, align: "right" });
+    doc.font("Helvetica").fontSize(9).fillColor(COLORS.muted)
+      .text(r[0], x + 12, y + 6, { width: w * 0.55 - 12 });
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(r[2] || COLORS.ink)
+      .text(truncate(r[1], 40), x + w * 0.55, y + 6,
+        { width: w * 0.45 - 12, align: "right", ellipsis: true });
     y += rowH;
   });
   return y;
+}
+
+function drawInfoCard(doc, title, rows, x, y, w) {
+  const rowH = 18;
+  const headerH = 22;
+  const h = headerH + rows.length * rowH + 8;
+  doc.roundedRect(x, y, w, h, 6).fill(COLORS.bg);
+  doc.font("Helvetica-Bold").fontSize(8.5).fillColor(COLORS.navy)
+    .text(title.toUpperCase(), x + 12, y + 8,
+      { width: w - 24, characterSpacing: 0.6 });
+  doc.strokeColor(COLORS.line).lineWidth(0.5)
+    .moveTo(x + 12, y + headerH).lineTo(x + w - 12, y + headerH).stroke();
+  let ry = y + headerH + 4;
+  rows.forEach(([label, value, color]) => {
+    doc.font("Helvetica").fontSize(8.5).fillColor(COLORS.muted)
+      .text(label, x + 12, ry, { width: w * 0.4 - 12 });
+    doc.font("Helvetica-Bold").fontSize(8.5).fillColor(color || COLORS.ink)
+      .text(truncate(value, 38), x + w * 0.4, ry,
+        { width: w * 0.6 - 12, ellipsis: true });
+    ry += rowH;
+  });
+  return y + h;
 }
 
 function generatePdf(data, outPath) {
@@ -481,21 +526,29 @@ function generatePdf(data, outPath) {
     doc.pipe(stream);
 
     const contentW = PAGE.w - MARGIN * 2;
+    const genDate = data.generatedAt.toISOString().slice(0, 10);
+    const genTime = data.generatedAt.toISOString().slice(11, 19) + " UTC";
 
-    // ============ PAGE 1 ============
+    // ============ PAGE 1 — Overview ============
     let y = drawHeader(doc, data);
 
-    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(20)
+    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(19)
       .text("Daily Website Health Report", MARGIN, y);
-    y += 26;
+    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(10)
+      .text("Portfolio Monitoring Report", MARGIN, y + 24);
+    y += 46;
+
+    y = drawInfoStrip(doc, [
+      { label: "URL", value: data.url.replace(/^https?:\/\//, "") },
+      { label: "Date", value: genDate },
+      { label: "Time", value: genTime },
+      { label: "Version", value: REPORT_VERSION },
+    ], MARGIN, y, contentW) + 16;
 
     y = sectionTitle(doc, "Executive Summary", MARGIN, y, contentW);
-    doc.font("Helvetica").fontSize(9.5).fillColor(COLORS.ink)
-      .text(buildSummary(data), MARGIN, y, { width: contentW, lineGap: 2 });
-    y = doc.y + 14;
 
-    const badgeW = 170;
-    const badgeH = 120;
+    const badgeW = 160;
+    const badgeH = 130;
     drawScoreBadge(doc, data, MARGIN, y, badgeW, badgeH);
 
     const rightX = MARGIN + badgeW + 12;
@@ -524,35 +577,22 @@ function generatePdf(data, outPath) {
     });
     y += badgeH + 18;
 
-    y = sectionTitle(doc, "Lighthouse Scores", MARGIN, y, contentW);
+    y = sectionTitle(doc, "Lighthouse Summary", MARGIN, y, contentW);
     if (data.lighthouse.ok) {
-      y = drawLighthouseGrid(doc, data.lighthouse, MARGIN, y, contentW) + 12;
+      y = drawLighthouseGrid(doc, data.lighthouse, MARGIN, y, contentW);
     } else {
       doc.font("Helvetica").fontSize(9).fillColor(COLORS.muted)
         .text(`Lighthouse audit unavailable: ${data.lighthouse.error || "unknown"}`,
           MARGIN, y, { width: contentW });
-      y = doc.y + 12;
-    }
-
-    const anyAsset = data.assets.robots.ok || data.assets.sitemap.ok || data.assets.favicon.ok
-      || data.assets.robots.status || data.assets.sitemap.status || data.assets.favicon.status;
-    if (anyAsset) {
-      y = sectionTitle(doc, "Asset Availability", MARGIN, y, contentW);
-      const assetCards = [
-        { label: "robots.txt", value: data.assets.robots.ok ? "Available" : "Missing", color: statusColor(data.assets.robots.ok) },
-        { label: "sitemap.xml", value: data.assets.sitemap.ok ? "Available" : "Missing", color: statusColor(data.assets.sitemap.ok) },
-        { label: "favicon.ico", value: data.assets.favicon.ok ? "Available" : "Missing", color: statusColor(data.assets.favicon.ok) },
-      ];
-      drawSummaryGrid(doc, assetCards, MARGIN, y, contentW);
     }
 
     drawFooter(doc, data, 1, 2);
 
-    // ============ PAGE 2 ============
+    // ============ PAGE 2 — Diagnostics ============
     doc.addPage();
     y = drawHeader(doc, data);
 
-    y = sectionTitle(doc, "Website Performance Metrics", MARGIN, y, contentW);
+    y = sectionTitle(doc, "Performance Metrics", MARGIN, y, contentW);
     const lh = data.lighthouse;
     const perfRows = [
       ["First Contentful Paint", lh.ok ? (lh.metrics.fcp ?? "N/A") : "N/A"],
@@ -560,54 +600,78 @@ function generatePdf(data, outPath) {
       ["Total Blocking Time", lh.ok ? (lh.metrics.tbt ?? "N/A") : "N/A"],
       ["Cumulative Layout Shift", lh.ok ? (lh.metrics.cls ?? "N/A") : "N/A"],
       ["Speed Index", lh.ok ? (lh.metrics.speedIndex ?? "N/A") : "N/A"],
-      ["Server Response Time", `${data.http.responseTimeMs} ms`],
     ];
     y = drawMetricsTable(doc, perfRows, MARGIN, y, contentW) + 16;
 
-    if (data.recommendations && data.recommendations.length > 0) {
-      y = sectionTitle(doc, "Recommendations", MARGIN, y, contentW);
-      const maxRecY = PAGE.h - 180;
-      const recs = data.recommendations.slice(0, 8);
-      for (const r of recs) {
-        if (y > maxRecY) break;
-        doc.circle(MARGIN + 4, y + 5, 1.8).fill(COLORS.cobalt);
-        doc.font("Helvetica").fontSize(9.5).fillColor(COLORS.ink)
-          .text(r, MARGIN + 14, y, { width: contentW - 14, lineGap: 2 });
-        y = doc.y + 6;
+    // GitHub + Deployment (side by side). Hide entirely if no data at all.
+    const g = data.git || {};
+    const hasGit = !!(g.repository || g.commitHash || g.commitMessage);
+    const hasDeploy = !!(g.workflow || g.runId || g.actor);
+    if (hasGit || hasDeploy) {
+      const colGap = 12;
+      const colW = (contentW - colGap) / 2;
+      const titleY = y;
+      if (hasGit) sectionTitle(doc, "GitHub Information", MARGIN, titleY, colW);
+      if (hasDeploy) sectionTitle(doc, "Deployment", MARGIN + colW + colGap, titleY, colW);
+      y = titleY + 22;
+
+      let leftEnd = y;
+      let rightEnd = y;
+      if (hasGit) {
+        const gitRows = [
+          ["Repository", g.repository || "—"],
+          ["Branch", g.branch || "—"],
+          ["Commit", g.commitHash || "—"],
+          ["Message", g.commitMessage || "—"],
+          ["Author", g.commitAuthor || g.actor || "—"],
+          ["Committed", g.commitDate || "—"],
+        ];
+        leftEnd = drawInfoCard(doc, "Repository", gitRows, MARGIN, y, colW);
       }
-      y += 6;
+      if (hasDeploy) {
+        const deployRows = [
+          ["Status", "Success", COLORS.good],
+          ["Workflow", g.workflow || "—"],
+          ["Event", g.event || "—"],
+          ["Run ID", g.runId || "—"],
+          ["Triggered By", g.actor || "—"],
+          ["Generated At", data.generatedAt.toISOString()],
+        ];
+        rightEnd = drawInfoCard(doc, "Pipeline", deployRows,
+          MARGIN + colW + colGap, y, colW);
+      }
+      y = Math.max(leftEnd, rightEnd) + 16;
     }
 
-    y = sectionTitle(doc, "System Information", MARGIN, y, contentW);
-    const isHttps = (data.http.finalUrl || data.url).startsWith("https://");
-    const sysRows = [
-      ["Domain", data.domain],
-      ["HTTPS", isHttps ? "Enabled" : "Disabled", isHttps ? COLORS.good : COLORS.bad],
-      ["Generated At", data.generatedAt.toISOString()],
-      ["Report Version", "2.0"],
-    ];
-    drawMetricsTable(doc, sysRows, MARGIN, y, contentW);
+    if (data.recommendations && data.recommendations.length > 0) {
+      y = sectionTitle(doc, "Recommendations", MARGIN, y, contentW);
+      const maxRecY = PAGE.h - 60;
+      const recs = data.recommendations.slice(0, 8);
+      for (const r of recs) {
+        if (y + 14 > maxRecY) break;
+        doc.circle(MARGIN + 4, y + 5, 1.8).fill(COLORS.cobalt);
+        doc.font("Helvetica").fontSize(9).fillColor(COLORS.ink)
+          .text(truncate(r, 130), MARGIN + 14, y,
+            { width: contentW - 14, height: 12, ellipsis: true, lineBreak: false });
+        y += 14;
+      }
+    }
 
     drawFooter(doc, data, 2, 2);
 
-    // Assert exactly 2 pages before finalising — catches layout overflow
-    // (PDFKit auto-adds a page when content spills past page height) and any
-    // stray addPage() calls that would produce blanks.
+    // Assert exactly 2 pages before finalising.
     const range = doc.bufferedPageRange();
     if (range.count !== 2) {
       doc.end();
       reject(new Error(
         `PDF layout assertion failed: expected exactly 2 pages, got ${range.count}. ` +
-        `A section overflowed page height or a blank page was added. ` +
-        `Reduce content in Recommendations / Performance / Summary or shrink card heights.`,
+        `A section overflowed page height or a blank page was added.`,
       ));
       return;
     }
 
     doc.end();
     stream.on("finish", () => {
-      // Post-write verification: parse the emitted PDF and count /Type /Page
-      // objects. Guards against silent PDFKit output changes.
       try {
         const buf = fs.readFileSync(outPath);
         const text = buf.toString("latin1");
@@ -615,7 +679,7 @@ function generatePdf(data, outPath) {
         if (pageMatches.length !== 2) {
           reject(new Error(
             `PDF post-write assertion failed: expected 2 pages in ${outPath}, ` +
-            `found ${pageMatches.length}. The file may contain blank or overflow pages.`,
+            `found ${pageMatches.length}.`,
           ));
           return;
         }
@@ -626,19 +690,6 @@ function generatePdf(data, outPath) {
     });
     stream.on("error", reject);
   });
-}
-
-function buildSummary(d) {
-  const parts = [];
-  parts.push(`${d.url} was ${d.http.ok ? "online" : "offline"} (HTTP ${d.http.status || "n/a"}) with a ${d.http.responseTimeMs} ms response time.`);
-  if (d.ssl.ok) parts.push(`SSL is valid, expiring in ${d.ssl.daysRemaining} days (issuer: ${d.ssl.issuer}).`);
-  else parts.push(`SSL check failed: ${d.ssl.error || "invalid certificate"}.`);
-  if (d.lighthouse.ok) {
-    const s = d.lighthouse.scores;
-    parts.push(`Lighthouse — Perf ${s.performance ?? "n/a"}, A11y ${s.accessibility ?? "n/a"}, BP ${s.bestPractices ?? "n/a"}, SEO ${s.seo ?? "n/a"}.`);
-  }
-  parts.push(`Overall health score: ${d.healthScore.value}/100 (${d.healthScore.grade}).`);
-  return parts.join(" ");
 }
 
 // ============================================================
