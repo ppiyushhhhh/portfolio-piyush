@@ -288,175 +288,14 @@ function buildRecommendations(d) {
 }
 
 // ============================================================
-// PDF rendering
+// PDF rendering — 2-page executive layout
 // ============================================================
+
+const PAGE = { w: 595.28, h: 841.89 };
+const MARGIN = 36;
 
 function statusColor(ok) {
   return ok ? COLORS.good : COLORS.bad;
-}
-
-function section(doc, title, y) {
-  if (y > doc.page.height - 120) {
-    doc.addPage();
-    y = 60;
-  }
-  doc.font("Helvetica-Bold").fontSize(13).fillColor(COLORS.navy).text(title, 50, y);
-  doc.strokeColor(COLORS.cobalt).lineWidth(1.5)
-    .moveTo(50, y + 18).lineTo(120, y + 18).stroke();
-  return y + 28;
-}
-
-function kvRow(doc, key, value, x, y, w, opts = {}) {
-  doc.font("Helvetica").fontSize(10).fillColor(COLORS.muted).text(key, x + 10, y + 6, { width: w * 0.4 - 10 });
-  doc.font("Helvetica-Bold").fontSize(10).fillColor(opts.color || COLORS.ink)
-    .text(String(value), x + w * 0.4, y + 6, { width: w * 0.6 - 10, align: "left" });
-  return y + 22;
-}
-
-function drawKvTable(doc, rows, x, y, w) {
-  rows.forEach((r, i) => {
-    if (i % 2 === 0) doc.rect(x, y, w, 22).fill(COLORS.bg);
-    doc.fillColor(COLORS.ink);
-    kvRow(doc, r[0], r[1], x, y, w, { color: r[2] });
-    y += 22;
-  });
-  return y;
-}
-
-function generatePdf(data, outPath) {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", margin: 50, bufferPages: true });
-    const stream = fs.createWriteStream(outPath);
-    doc.pipe(stream);
-
-    // -------- Cover page --------
-    doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FFFFFF");
-    doc.rect(0, 0, doc.page.width, 260).fill(COLORS.navy);
-    doc.circle(doc.page.width / 2, 110, 34).fill(COLORS.cobalt);
-    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(24)
-      .text("PP", 0, 96, { width: doc.page.width, align: "center" });
-    doc.font("Helvetica-Bold").fontSize(26).fillColor("#FFFFFF")
-      .text("Daily Website Health Report", 50, 170, { width: doc.page.width - 100, align: "center" });
-    doc.font("Helvetica").fontSize(12).fillColor("#C7D2FE")
-      .text(`${BRAND} · ${BRAND_TAGLINE}`, 50, 210, { width: doc.page.width - 100, align: "center" });
-    doc.fillColor("#9CA8D6").fontSize(10)
-      .text(data.url, 50, 232, { width: doc.page.width - 100, align: "center" });
-
-    const s = data.healthScore;
-    const scoreColor = s.value >= 90 ? COLORS.good : s.value >= 70 ? COLORS.warn : COLORS.bad;
-    doc.roundedRect(120, 320, doc.page.width - 240, 130, 8).fill(COLORS.bg);
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(10)
-      .text("OVERALL HEALTH SCORE", 0, 340, { width: doc.page.width, align: "center" });
-    doc.fillColor(scoreColor).font("Helvetica-Bold").fontSize(60)
-      .text(`${s.value}`, 0, 358, { width: doc.page.width, align: "center" });
-    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(14)
-      .text(s.grade, 0, 425, { width: doc.page.width, align: "center" });
-
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(10)
-      .text(`Generated ${data.generatedAt.toUTCString()}`, 50, doc.page.height - 80, { width: doc.page.width - 100, align: "center" });
-
-    // -------- Body page --------
-    doc.addPage();
-    let y = 50;
-
-    // Executive summary
-    y = section(doc, "Executive Summary", y);
-    doc.font("Helvetica").fontSize(10.5).fillColor(COLORS.ink)
-      .text(buildSummary(data), 50, y, { width: doc.page.width - 100, lineGap: 3 });
-    y = doc.y + 18;
-
-    // Website status
-    y = section(doc, "Website Status", y);
-    const httpRows = [
-      ["Website URL", data.url],
-      ["Status", data.http.ok ? "Online" : "Offline", statusColor(data.http.ok)],
-      ["HTTP Status Code", `${data.http.status} ${data.http.statusText || ""}`.trim(), statusColor(data.http.ok)],
-      ["Response Time", `${data.http.responseTimeMs} ms`],
-      ["Final URL", data.http.finalUrl || data.url],
-      ["DNS Lookup", data.dns.ok ? `OK — A: ${data.dns.a.join(", ") || "none"}` : `Failed (${data.dns.error || "no records"})`, statusColor(data.dns.ok)],
-      ["robots.txt", data.assets.robots.ok ? `Available (${data.assets.robots.status})` : `Missing (${data.assets.robots.status || "error"})`, statusColor(data.assets.robots.ok)],
-      ["sitemap.xml", data.assets.sitemap.ok ? `Available (${data.assets.sitemap.status})` : `Missing (${data.assets.sitemap.status || "error"})`, statusColor(data.assets.sitemap.ok)],
-      ["favicon.ico", data.assets.favicon.ok ? `Available (${data.assets.favicon.status})` : `Missing (${data.assets.favicon.status || "error"})`, statusColor(data.assets.favicon.ok)],
-    ];
-    y = drawKvTable(doc, httpRows, 50, y, doc.page.width - 100) + 15;
-
-    // Performance
-    y = section(doc, "Performance", y);
-    const lh = data.lighthouse;
-    const perfRows = [
-      ["Response Time", `${data.http.responseTimeMs} ms`],
-      ["First Contentful Paint", lh.ok ? lh.metrics.fcp ?? "N/A" : "N/A"],
-      ["Largest Contentful Paint", lh.ok ? lh.metrics.lcp ?? "N/A" : "N/A"],
-      ["Total Blocking Time", lh.ok ? lh.metrics.tbt ?? "N/A" : "N/A"],
-      ["Cumulative Layout Shift", lh.ok ? lh.metrics.cls ?? "N/A" : "N/A"],
-      ["Speed Index", lh.ok ? lh.metrics.speedIndex ?? "N/A" : "N/A"],
-    ];
-    y = drawKvTable(doc, perfRows, 50, y, doc.page.width - 100) + 15;
-
-    // SSL
-    y = section(doc, "SSL Certificate", y);
-    const sslRows = data.ssl.ok
-      ? [
-          ["Valid", "Yes", COLORS.good],
-          ["Issuer", data.ssl.issuer ?? "Unknown"],
-          ["Subject", data.ssl.subject ?? data.domain],
-          ["Valid From", data.ssl.validFrom ?? "N/A"],
-          ["Expiry Date", data.ssl.validTo ?? "N/A"],
-          ["Days Remaining", `${data.ssl.daysRemaining ?? "N/A"}`, (data.ssl.daysRemaining ?? 0) < 30 ? COLORS.warn : COLORS.good],
-        ]
-      : [
-          ["Valid", "No", COLORS.bad],
-          ["Error", data.ssl.error ?? "Unknown", COLORS.bad],
-        ];
-    y = drawKvTable(doc, sslRows, 50, y, doc.page.width - 100) + 15;
-
-    // Lighthouse
-    y = section(doc, "Lighthouse Scores", y);
-    if (lh.ok) {
-      const lhRows = [
-        ["Performance", `${lh.scores.performance ?? "N/A"} / 100`, scoreCatColor(lh.scores.performance)],
-        ["Accessibility", `${lh.scores.accessibility ?? "N/A"} / 100`, scoreCatColor(lh.scores.accessibility)],
-        ["Best Practices", `${lh.scores.bestPractices ?? "N/A"} / 100`, scoreCatColor(lh.scores.bestPractices)],
-        ["SEO", `${lh.scores.seo ?? "N/A"} / 100`, scoreCatColor(lh.scores.seo)],
-      ];
-      y = drawKvTable(doc, lhRows, 50, y, doc.page.width - 100) + 15;
-    } else {
-      doc.font("Helvetica").fontSize(10).fillColor(COLORS.muted)
-        .text(`Lighthouse did not run: ${lh.error || "unknown"}`, 50, y, { width: doc.page.width - 100 });
-      y = doc.y + 15;
-    }
-
-    // Recommendations
-    y = section(doc, "Recommendations", y);
-    data.recommendations.forEach((r) => {
-      if (y > doc.page.height - 90) {
-        doc.addPage();
-        y = 50;
-      }
-      doc.circle(56, y + 6, 2).fill(COLORS.cobalt);
-      doc.font("Helvetica").fontSize(10).fillColor(COLORS.ink)
-        .text(r, 66, y, { width: doc.page.width - 116, lineGap: 2 });
-      y = doc.y + 8;
-    });
-
-    // Footer / page numbers
-    const range = doc.bufferedPageRange();
-    for (let i = 0; i < range.count; i++) {
-      doc.switchToPage(i);
-      doc.strokeColor(COLORS.line).lineWidth(0.5)
-        .moveTo(50, doc.page.height - 45).lineTo(doc.page.width - 50, doc.page.height - 45).stroke();
-      doc.font("Helvetica").fontSize(8).fillColor(COLORS.muted).text(
-        `${BRAND} · ${data.url}  ·  Generated ${data.generatedAt.toISOString()}  ·  Page ${i + 1} of ${range.count}`,
-        50,
-        doc.page.height - 35,
-        { width: doc.page.width - 100, align: "center" },
-      );
-    }
-
-    doc.end();
-    stream.on("finish", resolve);
-    stream.on("error", reject);
-  });
 }
 
 function scoreCatColor(v) {
@@ -466,14 +305,266 @@ function scoreCatColor(v) {
   return COLORS.bad;
 }
 
+function drawHeader(doc, data) {
+  const x = MARGIN;
+  const y = MARGIN;
+  const w = PAGE.w - MARGIN * 2;
+
+  doc.roundedRect(x, y, 44, 44, 8).fill(COLORS.navy);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(16)
+    .text("PP", x, y + 14, { width: 44, align: "center" });
+
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(13)
+    .text(BRAND, x + 56, y + 4);
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9)
+    .text("IT Operations | DevOps | Cloud", x + 56, y + 20);
+  doc.fillColor(COLORS.cobalt).font("Helvetica").fontSize(9)
+    .text(data.url, x + 56, y + 33);
+
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
+    .text("REPORT GENERATED", x, y + 4, { width: w, align: "right" });
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10)
+    .text(data.generatedAt.toUTCString(), x, y + 16, { width: w, align: "right" });
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
+    .text("Daily Website Health Report", x, y + 32, { width: w, align: "right" });
+
+  doc.strokeColor(COLORS.line).lineWidth(0.7)
+    .moveTo(x, y + 56).lineTo(x + w, y + 56).stroke();
+
+  return y + 68;
+}
+
+function drawFooter(doc, data, pageNum, total) {
+  const y = PAGE.h - 28;
+  doc.strokeColor(COLORS.line).lineWidth(0.5)
+    .moveTo(MARGIN, y - 6).lineTo(PAGE.w - MARGIN, y - 6).stroke();
+  doc.font("Helvetica").fontSize(7.5).fillColor(COLORS.muted)
+    .text(`Generated automatically by GitHub Actions  ·  Portfolio: ${data.url}`,
+      MARGIN, y, { width: PAGE.w - MARGIN * 2, align: "left" });
+  doc.text(`Page ${pageNum} of ${total}`, MARGIN, y, {
+    width: PAGE.w - MARGIN * 2, align: "right",
+  });
+}
+
+function sectionTitle(doc, title, x, y, w) {
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(COLORS.navy)
+    .text(title.toUpperCase(), x, y, { width: w, characterSpacing: 0.8 });
+  doc.strokeColor(COLORS.cobalt).lineWidth(1.2)
+    .moveTo(x, y + 14).lineTo(x + 28, y + 14).stroke();
+  return y + 22;
+}
+
+function drawScoreBadge(doc, data, x, y, w, h) {
+  const s = data.healthScore;
+  const scoreColor = s.value >= 90 ? COLORS.good : s.value >= 70 ? COLORS.warn : COLORS.bad;
+  doc.roundedRect(x, y, w, h, 8).fill(COLORS.bg);
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
+    .text("OVERALL HEALTH SCORE", x, y + 12, { width: w, align: "center", characterSpacing: 0.6 });
+  const cx = x + w / 2;
+  const cy = y + h / 2 + 6;
+  doc.circle(cx, cy, 34).fill("#FFFFFF");
+  doc.circle(cx, cy, 34).lineWidth(2).strokeColor(scoreColor).stroke();
+  doc.fillColor(scoreColor).font("Helvetica-Bold").fontSize(26)
+    .text(`${s.value}`, x, cy - 14, { width: w, align: "center" });
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11)
+    .text(s.grade, x, y + h - 20, { width: w, align: "center" });
+}
+
+function drawSummaryCard(doc, label, value, x, y, w, h, color) {
+  doc.roundedRect(x, y, w, h, 6).fill(COLORS.bg);
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7.5)
+    .text(label.toUpperCase(), x + 10, y + 9, { width: w - 20, characterSpacing: 0.5 });
+  doc.fillColor(color || COLORS.ink).font("Helvetica-Bold").fontSize(12)
+    .text(String(value), x + 10, y + 24, { width: w - 20, ellipsis: true, height: h - 28 });
+}
+
+function drawSummaryGrid(doc, cards, x, y, w) {
+  const cols = 3;
+  const gap = 8;
+  const cardW = (w - gap * (cols - 1)) / cols;
+  const cardH = 48;
+  cards.forEach((c, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    drawSummaryCard(doc, c.label, c.value,
+      x + col * (cardW + gap), y + row * (cardH + gap),
+      cardW, cardH, c.color);
+  });
+  const rows = Math.ceil(cards.length / cols);
+  return y + rows * cardH + (rows - 1) * gap;
+}
+
+function drawLighthouseCard(doc, label, score, x, y, w, h) {
+  const color = scoreCatColor(score);
+  doc.roundedRect(x, y, w, h, 6).fill(COLORS.bg);
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7.5)
+    .text(label.toUpperCase(), x, y + 8, { width: w, align: "center", characterSpacing: 0.5 });
+  doc.fillColor(color).font("Helvetica-Bold").fontSize(22)
+    .text(score == null ? "—" : `${score}`, x, y + 20, { width: w, align: "center" });
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7)
+    .text("/ 100", x, y + 46, { width: w, align: "center" });
+}
+
+function drawLighthouseGrid(doc, lh, x, y, w) {
+  const cols = 4;
+  const gap = 8;
+  const cardW = (w - gap * (cols - 1)) / cols;
+  const cardH = 62;
+  const items = [
+    ["Performance", lh.ok ? lh.scores.performance : null],
+    ["Accessibility", lh.ok ? lh.scores.accessibility : null],
+    ["Best Practices", lh.ok ? lh.scores.bestPractices : null],
+    ["SEO", lh.ok ? lh.scores.seo : null],
+  ];
+  items.forEach(([label, s], i) => {
+    drawLighthouseCard(doc, label, s, x + i * (cardW + gap), y, cardW, cardH);
+  });
+  return y + cardH;
+}
+
+function drawMetricsTable(doc, rows, x, y, w) {
+  const rowH = 22;
+  rows.forEach((r, i) => {
+    if (i % 2 === 0) doc.rect(x, y, w, rowH).fill(COLORS.bg);
+    doc.font("Helvetica").fontSize(9.5).fillColor(COLORS.muted)
+      .text(r[0], x + 12, y + 7, { width: w * 0.5 - 12 });
+    doc.font("Helvetica-Bold").fontSize(9.5).fillColor(r[2] || COLORS.ink)
+      .text(String(r[1]), x + w * 0.5, y + 7, { width: w * 0.5 - 12, align: "right" });
+    y += rowH;
+  });
+  return y;
+}
+
+function generatePdf(data, outPath) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: MARGIN, bufferPages: true });
+    const stream = fs.createWriteStream(outPath);
+    doc.pipe(stream);
+
+    const contentW = PAGE.w - MARGIN * 2;
+
+    // ============ PAGE 1 ============
+    let y = drawHeader(doc, data);
+
+    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(20)
+      .text("Daily Website Health Report", MARGIN, y);
+    y += 26;
+
+    y = sectionTitle(doc, "Executive Summary", MARGIN, y, contentW);
+    doc.font("Helvetica").fontSize(9.5).fillColor(COLORS.ink)
+      .text(buildSummary(data), MARGIN, y, { width: contentW, lineGap: 2 });
+    y = doc.y + 14;
+
+    const badgeW = 170;
+    const badgeH = 120;
+    drawScoreBadge(doc, data, MARGIN, y, badgeW, badgeH);
+
+    const rightX = MARGIN + badgeW + 12;
+    const rightW = contentW - badgeW - 12;
+    const topCards = [
+      { label: "Website Status", value: data.http.ok ? "Online" : "Offline", color: statusColor(data.http.ok) },
+      { label: "HTTP Status", value: `${data.http.status || "—"}`, color: statusColor(data.http.ok) },
+      { label: "Response Time", value: `${data.http.responseTimeMs} ms`,
+        color: data.http.responseTimeMs > 2000 ? COLORS.bad : data.http.responseTimeMs > 1000 ? COLORS.warn : COLORS.good },
+      { label: "SSL Status", value: data.ssl.ok ? "Valid" : "Invalid", color: statusColor(data.ssl.ok) },
+      { label: "SSL Expiry", value: data.ssl.ok && data.ssl.daysRemaining != null ? `${data.ssl.daysRemaining} days` : "N/A",
+        color: data.ssl.ok ? ((data.ssl.daysRemaining ?? 0) < 30 ? COLORS.warn : COLORS.good) : COLORS.bad },
+      { label: "DNS Status", value: data.dns.ok ? "Resolved" : "Failed", color: statusColor(data.dns.ok) },
+    ];
+    const rCols = 3;
+    const rGap = 6;
+    const rCardW = (rightW - rGap * (rCols - 1)) / rCols;
+    const rCardH = (badgeH - rGap) / 2;
+    topCards.forEach((c, i) => {
+      const col = i % rCols;
+      const row = Math.floor(i / rCols);
+      drawSummaryCard(doc, c.label, c.value,
+        rightX + col * (rCardW + rGap),
+        y + row * (rCardH + rGap),
+        rCardW, rCardH, c.color);
+    });
+    y += badgeH + 18;
+
+    y = sectionTitle(doc, "Lighthouse Scores", MARGIN, y, contentW);
+    if (data.lighthouse.ok) {
+      y = drawLighthouseGrid(doc, data.lighthouse, MARGIN, y, contentW) + 12;
+    } else {
+      doc.font("Helvetica").fontSize(9).fillColor(COLORS.muted)
+        .text(`Lighthouse audit unavailable: ${data.lighthouse.error || "unknown"}`,
+          MARGIN, y, { width: contentW });
+      y = doc.y + 12;
+    }
+
+    const anyAsset = data.assets.robots.ok || data.assets.sitemap.ok || data.assets.favicon.ok
+      || data.assets.robots.status || data.assets.sitemap.status || data.assets.favicon.status;
+    if (anyAsset) {
+      y = sectionTitle(doc, "Asset Availability", MARGIN, y, contentW);
+      const assetCards = [
+        { label: "robots.txt", value: data.assets.robots.ok ? "Available" : "Missing", color: statusColor(data.assets.robots.ok) },
+        { label: "sitemap.xml", value: data.assets.sitemap.ok ? "Available" : "Missing", color: statusColor(data.assets.sitemap.ok) },
+        { label: "favicon.ico", value: data.assets.favicon.ok ? "Available" : "Missing", color: statusColor(data.assets.favicon.ok) },
+      ];
+      drawSummaryGrid(doc, assetCards, MARGIN, y, contentW);
+    }
+
+    drawFooter(doc, data, 1, 2);
+
+    // ============ PAGE 2 ============
+    doc.addPage();
+    y = drawHeader(doc, data);
+
+    y = sectionTitle(doc, "Website Performance Metrics", MARGIN, y, contentW);
+    const lh = data.lighthouse;
+    const perfRows = [
+      ["First Contentful Paint", lh.ok ? (lh.metrics.fcp ?? "N/A") : "N/A"],
+      ["Largest Contentful Paint", lh.ok ? (lh.metrics.lcp ?? "N/A") : "N/A"],
+      ["Total Blocking Time", lh.ok ? (lh.metrics.tbt ?? "N/A") : "N/A"],
+      ["Cumulative Layout Shift", lh.ok ? (lh.metrics.cls ?? "N/A") : "N/A"],
+      ["Speed Index", lh.ok ? (lh.metrics.speedIndex ?? "N/A") : "N/A"],
+      ["Server Response Time", `${data.http.responseTimeMs} ms`],
+    ];
+    y = drawMetricsTable(doc, perfRows, MARGIN, y, contentW) + 16;
+
+    if (data.recommendations && data.recommendations.length > 0) {
+      y = sectionTitle(doc, "Recommendations", MARGIN, y, contentW);
+      const maxRecY = PAGE.h - 180;
+      const recs = data.recommendations.slice(0, 8);
+      for (const r of recs) {
+        if (y > maxRecY) break;
+        doc.circle(MARGIN + 4, y + 5, 1.8).fill(COLORS.cobalt);
+        doc.font("Helvetica").fontSize(9.5).fillColor(COLORS.ink)
+          .text(r, MARGIN + 14, y, { width: contentW - 14, lineGap: 2 });
+        y = doc.y + 6;
+      }
+      y += 6;
+    }
+
+    y = sectionTitle(doc, "System Information", MARGIN, y, contentW);
+    const isHttps = (data.http.finalUrl || data.url).startsWith("https://");
+    const sysRows = [
+      ["Domain", data.domain],
+      ["HTTPS", isHttps ? "Enabled" : "Disabled", isHttps ? COLORS.good : COLORS.bad],
+      ["Generated At", data.generatedAt.toISOString()],
+      ["Report Version", "2.0"],
+    ];
+    drawMetricsTable(doc, sysRows, MARGIN, y, contentW);
+
+    drawFooter(doc, data, 2, 2);
+
+    doc.end();
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+  });
+}
+
 function buildSummary(d) {
   const parts = [];
-  parts.push(`On ${d.generatedAt.toUTCString()}, ${d.url} was ${d.http.ok ? "online" : "offline"} (HTTP ${d.http.status || "n/a"}, ${d.http.responseTimeMs} ms).`);
-  if (d.ssl.ok) parts.push(`SSL is valid and expires in ${d.ssl.daysRemaining} days (issued by ${d.ssl.issuer}).`);
+  parts.push(`${d.url} was ${d.http.ok ? "online" : "offline"} (HTTP ${d.http.status || "n/a"}) with a ${d.http.responseTimeMs} ms response time.`);
+  if (d.ssl.ok) parts.push(`SSL is valid, expiring in ${d.ssl.daysRemaining} days (issuer: ${d.ssl.issuer}).`);
   else parts.push(`SSL check failed: ${d.ssl.error || "invalid certificate"}.`);
   if (d.lighthouse.ok) {
     const s = d.lighthouse.scores;
-    parts.push(`Lighthouse — Performance ${s.performance ?? "n/a"}, Accessibility ${s.accessibility ?? "n/a"}, Best Practices ${s.bestPractices ?? "n/a"}, SEO ${s.seo ?? "n/a"}.`);
+    parts.push(`Lighthouse — Perf ${s.performance ?? "n/a"}, A11y ${s.accessibility ?? "n/a"}, BP ${s.bestPractices ?? "n/a"}, SEO ${s.seo ?? "n/a"}.`);
   }
   parts.push(`Overall health score: ${d.healthScore.value}/100 (${d.healthScore.grade}).`);
   return parts.join(" ");
