@@ -351,14 +351,21 @@ function truncate(str, max) {
   return s.length > max ? s.slice(0, max - 1) + "…" : s;
 }
 
+const LOGO_PATH = path.join(__dirname, "assets", "logo.png");
+const LOGO_EXISTS = fs.existsSync(LOGO_PATH);
+
 function drawHeader(doc, data) {
   const x = MARGIN;
   const y = MARGIN;
   const w = PAGE.w - MARGIN * 2;
 
-  doc.roundedRect(x, y, 40, 40, 8).fill(COLORS.navy);
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(15)
-    .text("PP", x, y + 12, { width: 40, align: "center" });
+  if (LOGO_EXISTS) {
+    doc.image(LOGO_PATH, x, y, { fit: [40, 40], align: "center", valign: "center" });
+  } else {
+    doc.roundedRect(x, y, 40, 40, 8).fill(COLORS.navy);
+    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(15)
+      .text("PP", x, y + 12, { width: 40, align: "center" });
+  }
 
   doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12)
     .text(BRAND, x + 52, y + 4);
@@ -366,6 +373,7 @@ function drawHeader(doc, data) {
     .text(data.url, x + 52, y + 20);
   doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8)
     .text(BRAND_TAGLINE, x + 52, y + 32);
+
 
   doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7.5)
     .text("REPORT GENERATED", x, y + 4, { width: w, align: "right", characterSpacing: 0.6 });
