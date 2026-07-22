@@ -389,10 +389,10 @@ function drawFooter(doc, data, pageNum, total) {
   doc.font("Helvetica").fontSize(7.5).fillColor(COLORS.muted)
     .text(
       `Generated automatically by GitHub Actions · ${data.url}${repo} · ${data.generatedAt.toISOString()}`,
-      MARGIN, y, { width: w, align: "left" },
+      MARGIN, y, { width: w, align: "left", lineBreak: false, ellipsis: true },
     );
   doc.text(`Page ${pageNum} of ${total}`, MARGIN, y, {
-    width: w, align: "right",
+    width: w, align: "right", lineBreak: false,
   });
 }
 
