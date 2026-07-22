@@ -1,73 +1,103 @@
-# Architectural Empathy Portfolio Redesign
 
-Replace the current notebook design with a Swiss International Style single-page site, using a 12-column blueprint grid, the Stone White / Deep Carbon / System Cobalt palette, and giant condensed uppercase typography. All content (projects, experience, certs, education, contact) is preserved from the existing resume data.
+## Goal
 
-## Route architecture
+Redesign only the PDF generation inside `scripts/generate-report.mjs`. Data collection (HTTP, SSL, DNS, Lighthouse, assets), scoring, email delivery, and the GitHub Actions workflow stay exactly as they are.
 
-Stay on the single `/` route with anchor-scrolled sections. Sticky top nav with anchor links: Projects · Experience · Skills · Certifications · GitHub · Contact.
+## What changes
+
+Only the PDF-rendering half of `scripts/generate-report.mjs`:
+- `generatePdf()` and every helper it calls (`drawHeader`, `drawFooter`, `sectionTitle`, `drawScoreBadge`, `drawSummaryCard`, `drawSummaryGrid`, `drawLighthouseGrid`, `drawMetricsTable`, plus new helpers).
+- A small, new `collectGitInfo()` helper that reads GitHub Actions env vars (`GITHUB_REPOSITORY`, `GITHUB_REF_NAME`, `GITHUB_SHA`, `GITHUB_WORKFLOW`, `GITHUB_RUN_ID`, `GITHUB_SERVER_URL`, `GITHUB_ACTOR`, `GITHUB_EVENT_NAME`) and, when available, shells out to `git log -1` for commit message/author/date. All fields degrade gracefully to `—` when running locally. This is metadata only — it does not touch monitoring logic.
+- `data` gets a `git` block populated from that helper before `generatePdf` is called.
+
+Nothing else in the file is touched: collectors, `computeHealthScore`, `buildRecommendations`, `sendReportEmail`, `sendFailureAlert`, and `main()` stay unchanged aside from the one new `data.git = collectGitInfo()` line.
+
+## New 2-page layout (A4 portrait, 36 pt margin)
+
+Consistent visual system:
+- White background, navy (`#0B1F3A`) section headers with cobalt underline accent.
+- Light-gray (`#F5F7FB`) rounded info cards, 6 pt radius.
+- Status colors: green `#16A34A` / orange `#D97706` / red `#DC2626`.
+- Typography: Helvetica-Bold for headings and metric values, Helvetica for labels; 8 pt small-caps labels, 12 pt values, 9.5 pt body.
+- Fixed vertical rhythm (14 pt between sections, 8 pt inside cards) — no free-floating `doc.y` drift, so nothing overflows.
+
+### Page 1 — Overview
 
 ```text
-/  (single page)
- ├─ #hero
- ├─ #projects
- ├─ #experience   (dark #0F1115)
- ├─ #skills
- ├─ #certifications
- ├─ #github
- └─ #contact      (dark #0F1115)
+┌───────────────────────────────────────────────────────────┐
+│ [PP] Piyush Prasad · piyushprasad.in     REPORT · date/time│
+├───────────────────────────────────────────────────────────┤
+│ Daily Website Health Report                                │
+│ Portfolio Monitoring Report · v2.1                         │
+│                                                            │
+│ URL  ·  Date  ·  Time  ·  Version   (single info strip)    │
+│                                                            │
+│ EXECUTIVE SUMMARY  ───                                     │
+│ ┌──────────┐  ┌─────────────┬─────────────┬─────────────┐  │
+│ │  Health  │  │ Website     │ HTTP Status │ Response    │  │
+│ │   87     │  │ Online      │ 200         │ 412 ms      │  │
+│ │ Healthy  │  ├─────────────┼─────────────┼─────────────┤  │
+│ └──────────┘  │ SSL Status  │ SSL Expiry  │ DNS Status  │  │
+│               │ Valid       │ 71 days     │ Resolved    │  │
+│               └─────────────┴─────────────┴─────────────┘  │
+│                                                            │
+│ LIGHTHOUSE SUMMARY  ───                                    │
+│ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐                │
+│ │ Perf   │ │ A11y   │ │ BestPr │ │ SEO    │                │
+│ │  94    │ │  98    │ │  100   │ │  100   │                │
+│ └────────┘ └────────┘ └────────┘ └────────┘                │
+└───────────────────────────────────────────────────────────┘
 ```
 
-## Visual system
+- Removes the redundant "Executive Summary" prose paragraph (URL/date are already in the header and info strip).
+- Asset Availability moves off page 1 (it was optional and produced whitespace when everything was healthy).
 
-**Palette (inline hex where tokens don't cover):**
-- `--stone: #F4F4F2` (base bg)
-- `--carbon: #0F1115` (ink + dark sections)
-- `--cobalt: #1A4BFF` (accent)
-- `--aluminum: #D1D1CB` (grid lines, hairlines, borders)
+### Page 2 — Diagnostics
 
-**Typography (Google Fonts via `<link>` in `__root.tsx`):**
-- Body: Inter 400/500 — 18px / 1.6
-- Display: Archivo Black (condensed black) — up to 120px / 0.88, tracking -0.03em, uppercase
-- Mono: JetBrains Mono 400/500 — 11–14px, tracking 0.15em, uppercase
+```text
+┌───────────────────────────────────────────────────────────┐
+│ [PP] header (same as page 1)                              │
+├───────────────────────────────────────────────────────────┤
+│ PERFORMANCE METRICS  ───                                  │
+│ ┌───────────────────────────────┬──────────────────────┐  │
+│ │ First Contentful Paint        │ 0.8 s                │  │
+│ │ Largest Contentful Paint      │ 1.4 s                │  │
+│ │ Total Blocking Time           │ 20 ms                │  │
+│ │ Cumulative Layout Shift       │ 0.02                 │  │
+│ │ Speed Index                   │ 1.1 s                │  │
+│ └───────────────────────────────┴──────────────────────┘  │
+│                                                            │
+│ GITHUB INFORMATION  ───         DEPLOYMENT  ───            │
+│ ┌───────────────────────────┐   ┌───────────────────────┐  │
+│ │ Repository   user/repo    │   │ Status     Success    │  │
+│ │ Branch       main         │   │ Workflow   Daily …    │  │
+│ │ Commit       9f3a1c2      │   │ Generated  2026-…     │  │
+│ │ Message      Fix header … │   └───────────────────────┘  │
+│ │ Author       Piyush P.    │                              │
+│ │ Committed    2026-…       │                              │
+│ └───────────────────────────┘                              │
+│                                                            │
+│ RECOMMENDATIONS  ───                                       │
+│ • up to 5–8 bullets, single line each, ellipsis if long    │
+│                                                            │
+│ Footer: Generated by GitHub Actions · piyushprasad.in ·   │
+│         github.com/<repo> · <ISO date>          Page 2/2  │
+└───────────────────────────────────────────────────────────┘
+```
 
-**Grid:** persistent 12-column overlay at ~6% opacity via a fixed SVG background; vertical lines animate `pathLength 0→1` on page load with 300ms stagger.
+- Two side-by-side info tables (GitHub | Deployment) share one row so both fit without a third page.
+- Empty-section guard: if `data.git` has no repository info **and** no commit info, both the GitHub and Deployment blocks are hidden and Recommendations shifts up (no blank space).
+- Recommendations are hard-capped at what fits above the footer — same "measure then break" loop that's already there, tightened to `PAGE.h - 90` and single-line `height` per bullet with ellipsis.
 
-**Motion:** IntersectionObserver + Framer Motion `whileInView` for staggered fade-up (24px, ease-out, momentum spring). "Curtain reveal" clip-path animation on images (inset 0 50% 0 50% → inset 0). Respects `prefers-reduced-motion` via existing `MotionConfig`.
+## Guarantees kept
 
-## Section specs
+- Existing 2-page assertions stay: pre-`doc.end()` `bufferedPageRange().count === 2` check plus the post-write `/Type /Page` re-parse. Any regression that would produce 3+ pages or a blank still throws.
+- No new npm dependencies.
+- `computeHealthScore`, `buildRecommendations`, all collectors, `sendReportEmail`, `sendFailureAlert`, and `.github/workflows/daily-report.yml` are untouched.
 
-**Hero** — mono metadata strip (`PIYUSH_PRASAD.v2026 — NAVI MUMBAI, INDIA — AVAILABLE FOR OPPORTUNITIES`), two-line uppercase name with "PRASAD" in cobalt, role subtitle, short intro, contact links on the right (email/linkedin/github mono list with cobalt arrows). Faint blueprint-paper image at 7% opacity behind. Scroll cue at bottom.
+## Technical notes
 
-**Projects** — full-width list rows separated by 1px `--aluminum` hairlines. Each row: `01` mono index left, giant title (hover → cobalt + faint project image fades in behind via clip-path reveal), cobalt mono subtitle, description + tech pill tags + `→ live link` right column. Two projects (existing: DevOps CI/CD Pipeline, Production AWS EC2 + DevSecOps).
-
-**Experience** — dark carbon section. Left sticky column: company selector buttons (Runtime Solutions / Credence Infotech) with cobalt left-border on active. Right column: role title, "Full-Time" cobalt outline badge, mono period, bulleted responsibilities with cobalt `→` arrows. Content from existing full bullet lists.
-
-**Skills** — Left column: "THE STACK" giant heading, short paragraph, and a "live component library" card containing three CLI-labeled buttons (`$ aws deploy`, `$ nginx -t`, `$ systemctl`), a working toggle (IDLE ↔ ACTIVE state), and a draggable range slider bound to a "Utilization: X%" readout. Right column: 2-col grid of category cards (Cloud, Operating Systems, DevOps Tools, Web Server, CI/CD, Monitoring, Security, ITSM), each with a cobalt dot, mono label, and pill tags.
-
-**Certifications & Education** — Two columns. Left: credential rows with a mono-bordered icon box + credential name + issuer in cobalt mono (Canonical, GitHub, AWS, LinkedIn, Packt). Right: education cards (B.Com — Tilak / Univ. of Mumbai, HSC — Allen Swami Vivekanand, SSC — Tilak Global) with mono period on top.
-
-**GitHub Activity** — fetch `https://api.github.com/users/ppiyushhhhh/repos?sort=pushed&per_page=6` on the client via `useQuery`, then for each repo fetch latest commit from `/repos/{owner}/{repo}/commits?per_page=1`. 2-col card grid: repo name, language badge (cobalt dot + name), description, latest commit message + short SHA (7 chars) + relative date. Loading spinner, error/rate-limit fallback message. Public REST — no auth; unauthenticated rate limit (60/hr per IP) is acceptable for a portfolio.
-
-**Contact** — dark carbon. Giant "LET'S BUILD TOGETHER" with "BUILD" in cobalt. Copy-to-clipboard email button (shows `COPIED ✓` for 1.5s), phone `tel:` link, LinkedIn + GitHub rows with animated arrow nudge on hover. Footer: `© 2026 PIYUSH PRASAD — ALL RIGHTS RESERVED` and `NAVI MUMBAI` right-aligned.
-
-**Persistent CV button** — fixed bottom-right, dark pill with `↓ DOWNLOAD CV`. On hover, expands upward into a small preview card (name, role, "Cloud & DevOps · 2026" mono line). Click downloads `/resume.pdf` (existing public asset, or a placeholder if not present — will note if missing during build).
-
-## Files to change
-
-- `src/routes/__root.tsx` — swap fonts to Inter + Archivo Black + JetBrains Mono; keep existing SEO/OG tags.
-- `src/styles.css` — replace notebook tokens with architectural palette + font stacks; remove `paper`, `marker-hi`, `ink-underline` utilities.
-- `src/routes/index.tsx` — full rewrite as thin composition importing section components.
-- `src/components/portfolio/` (new): `TopNav.tsx`, `BlueprintGrid.tsx`, `Hero.tsx`, `Projects.tsx`, `Experience.tsx`, `Skills.tsx`, `Certifications.tsx`, `GithubActivity.tsx`, `Contact.tsx`, `CvDock.tsx`.
-- `src/components/notebook/*` — delete (superseded).
-
-## Dependencies
-
-- `framer-motion` — already installed.
-- `@tanstack/react-query` — already installed; used for GitHub fetch.
-- No new packages.
-
-## Out of scope
-
-- No dark mode toggle (spec explicitly says no standard dark mode; dark is only Experience + Contact by design).
-- No real macro studio photos — will use CSS-generated blueprint patterns + subtle SVG textures at 7% opacity as the imagery layer. **Question: is that acceptable, or do you want me to generate cobalt/carbon macro studio photos (keyboard switches, calipers, blueprint paper) via image gen?**
-- GitHub API is called unauthenticated (60/hr/IP). If you want higher limits, a server function with a token is a follow-up.
+- `collectGitInfo()` uses `spawnSync("git", ["log", "-1", "--pretty=format:%h%x1f%an%x1f%ad%x1f%s", "--date=iso-strict"])` inside a try/catch; if git is absent it returns `null` for those fields. Repository / branch / workflow / run URL come from env vars, which are always set on GitHub Actions.
+- Commit message is truncated to ~70 chars with ellipsis before rendering so the card stays single-line.
+- Report Version bumps to `2.1` to reflect the new layout.
+- No emojis, no gradients, no placeholder rows — sections with all-empty values are skipped by `if` guards rather than rendered blank.
