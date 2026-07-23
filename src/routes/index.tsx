@@ -580,6 +580,7 @@ function Skills() {
                 <button
                   onClick={() => setToggle((t) => !t)}
                   aria-pressed={toggle}
+                  aria-label={`Toggle system status, currently ${toggle ? "active" : "idle"}`}
                   className={`relative h-6 w-11 rounded-full border transition-colors ${
                     toggle ? "border-cobalt bg-cobalt" : "border-[#D1D1CB] bg-[#EAEAE4]"
                   }`}
