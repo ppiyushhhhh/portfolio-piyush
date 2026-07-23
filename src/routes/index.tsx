@@ -86,7 +86,7 @@ const EXPERIENCE = [
     company: "Credence Infotech",
     logo: credenceLogo,
     url: "https://credenceinfotech.com/",
-    role: "IT Support Coordinator",
+    role: "IT Service Management Consultant",
     type: "Full-Time",
     period: "Feb 2022 — Oct 2024",
     bullets: [
