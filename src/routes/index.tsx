@@ -1025,6 +1025,9 @@ function Contact() {
         </div>
         <div className="mono mt-24 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-8 text-[10px] text-white/50">
           <span>© 2026 PIYUSH PRASAD — ALL RIGHTS RESERVED</span>
+          <a href="/guides/devsecops-pipeline" className="text-white/70 hover:text-cobalt underline underline-offset-4">
+            GUIDE · BUILDING A SECURE CI/CD PIPELINE
+          </a>
           <span>NAVI MUMBAI · IN</span>
         </div>
       </div>
