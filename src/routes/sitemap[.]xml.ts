@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type {} from "@tanstack/react-start";
+import "@tanstack/start-client-core/dist/esm/serverRoute.js";
 
 const BASE_URL = "https://simply-profile-plain.lovable.app";
 
