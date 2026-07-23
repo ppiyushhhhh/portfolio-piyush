@@ -1048,21 +1048,6 @@ function CvDock() {
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
-      <motion.div
-        initial={false}
-        animate={{ opacity: open ? 1 : 0, y: open ? 0 : 10, pointerEvents: open ? "auto" : "none" }}
-        transition={{ duration: 0.2 }}
-        className="mb-3 hidden w-64 border border-[#D1D1CB] bg-white p-4 shadow-lg sm:block"
-      >
-        <div className="mono text-[10px] text-carbon/60">RESUME · 2026</div>
-        <div className="display mt-2 text-[22px] leading-[0.95]">
-          PIYUSH<br /><span className="text-cobalt">PRASAD</span>
-        </div>
-        <div className="mono mt-3 text-[9px] text-carbon/70">CLOUD &amp; DEVOPS ENGINEER</div>
-        <div className="mt-3 border-t border-[#D1D1CB] pt-3 text-[11px] text-carbon/70">
-          Preview inline in a new tab.
-        </div>
-      </motion.div>
       <div className="flex items-center justify-end gap-2">
         <a
           href="/resume"
