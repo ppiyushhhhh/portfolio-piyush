@@ -29,6 +29,9 @@ import tilakGlobalLogo from "@/assets/tilak-global-logo.png";
 const ppLogo = { url: "/pp-logo.png" };
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    links: [{ rel: "canonical", href: "https://simply-profile-plain.lovable.app/" }],
+  }),
   component: PortfolioPage,
 });
 
